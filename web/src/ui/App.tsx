@@ -10,6 +10,8 @@ import {
 } from '@dnd-kit/core'
 import type { TaskIndexItem, TaskStatus } from '../api/types'
 import { fetchIndex, setTaskStatus } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
+import { navigate } from './router'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
 
@@ -25,6 +27,8 @@ function statusLabel(s: TaskStatus): string {
 }
 
 export function App() {
+  const { state: authState, logout } = useAuth()
+
   const [items, setItems] = useState<TaskIndexItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -130,6 +134,14 @@ export function App() {
     [activeId, items],
   )
 
+  async function onLogout() {
+    try {
+      await logout()
+    } finally {
+      navigate('/login', { replace: true })
+    }
+  }
+
   return (
     <div className="app">
       <header className="topbar">
@@ -157,6 +169,14 @@ export function App() {
 
           <button className="btn" onClick={() => void reload()} disabled={loading}>
             {loading ? 'Loading…' : 'Refresh'}
+          </button>
+
+          <div style={{ color: 'rgba(231, 236, 255, 0.75)', fontSize: 12, paddingBottom: 2 }}>
+            {authState.status === 'authed' ? authState.user.username : ''}
+          </div>
+
+          <button className="btn" onClick={() => void onLogout()} disabled={loading}>
+            Logout
           </button>
         </div>
       </header>

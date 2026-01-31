@@ -1,0 +1,29 @@
+services:
+  api:
+    image: pm-agent-api
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api.prod
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8787"
+      PM_ROOT: /data/pm
+      PM_SECRETS_ROOT: /data/.pm-secrets
+      PM_SESSION_SECURE: "1"
+      # CORS not needed when web proxies /api, but you can enable if desired
+      CORS: "0"
+    volumes:
+      - ./pm:/data/pm
+      - ./.pm-secrets:/data/.pm-secrets
+    ports:
+      - "8787:8787"
+
+  web:
+    image: pm-agent-web
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web.prod
+    depends_on:
+      - api
+    ports:
+      - "8080:80"

@@ -13,7 +13,7 @@ help:
 	@echo "  make clean     - remove containers + volumes (node_modules)"
 
 up:
-	docker compose up --build
+	docker compose up -d --build
 
 down:
 	docker compose down

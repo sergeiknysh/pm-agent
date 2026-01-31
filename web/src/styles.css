@@ -200,6 +200,56 @@ input::placeholder {
   cursor: grabbing;
 }
 
+/* Login */
+.login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.login-card {
+  width: min(420px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(17, 26, 51, 0.55);
+  padding: 18px 16px;
+}
+
+.login-title {
+  font-weight: 800;
+  font-size: 18px;
+  margin-bottom: 4px;
+}
+
+.login-subtitle {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notice {
+  margin: 10px 0;
+  border: 1px solid rgba(122, 162, 255, 0.35);
+  background: rgba(122, 162, 255, 0.12);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: rgba(231, 236, 255, 0.92);
+  font-size: 13px;
+}
+
+.error--compact {
+  margin: 10px 0;
+  padding: 10px 12px;
+}
+
 .task-title {
   font-weight: 650;
   font-size: 14px;
