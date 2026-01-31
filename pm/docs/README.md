@@ -15,3 +15,10 @@
 - Входящие: `pm/inbox.md`
 - Проекты: `pm/projects/*/project.md`
 - Индекс для UI: `pm/_meta/index.json`
+
+## Переменные окружения
+- `PM_ROOT` — путь к папке `pm/` (по умолчанию: `./pm`).
+- `PM_SECRETS_ROOT` — путь к секретам (по умолчанию: `/home/sergei/.pm-secrets`).
+- `PM_SESSION_TTL_HOURS` — TTL сессии в часах (по умолчанию: 168).
+- `PM_SESSION_SECURE` — если `1`/`true`, cookie помечается `Secure`.
+- `CORS` / `CORS_ORIGIN` — включить CORS для сервера (см. `src/server.ts`).
