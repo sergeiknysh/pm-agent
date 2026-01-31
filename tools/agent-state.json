@@ -13,6 +13,24 @@
   },
   "runs": [
     {
+      "id": "5b8df4f1",
+      "at": "2026-01-31T14:43:35.727Z",
+      "provider": "claude",
+      "mode": "implement",
+      "task": "Implement auth v1 (files+secrets): pm/users/users.json (public) + PM_SECRETS_ROOT=/home/sergei/.pm-secrets shadow.json (argon2id) + sessions/ (cookie pm_session, httpOnly). Add endpoints: POST /api/auth/login, POST /api/auth/logout, GET /api/me. Add middleware requireAuth/requireAdmin and protect write endpoints (at least task/project mutations). Add CLI command: pm bootstrap-user --username admin (creates user if missing) and pm set-password <username> (writes shadow). Add tests for login/session and bootstrap. Document env vars.",
+      "branch": "feat/auth-v1",
+      "workdir": "/tmp/pm-feat/auth-v1"
+    },
+    {
+      "id": "3a1e2dd1",
+      "at": "2026-01-31T13:43:08.494Z",
+      "provider": "claude",
+      "mode": "implement",
+      "task": "Implement auth v1 (files+secrets): pm/users/users.json (public) + PM_SECRETS_ROOT=/home/sergei/.pm-secrets shadow.json (argon2id) + sessions/ (cookie pm_session, httpOnly). Add endpoints: POST /api/auth/login, POST /api/auth/logout, GET /api/me. Add middleware requireAuth/requireAdmin and protect write endpoints (at least task/project mutations). Add CLI command: pm bootstrap-user --username admin (creates user if missing) and pm set-password <username> (writes shadow). Add tests for login/session and bootstrap. Document env vars.",
+      "branch": "feat/auth-v1",
+      "workdir": "/tmp/pm-feat/auth-v1"
+    },
+    {
       "id": "0c539a28",
       "at": "2026-01-31T13:36:01.377Z",
       "provider": "claude",

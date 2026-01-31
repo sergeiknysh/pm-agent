@@ -236,6 +236,22 @@ function buildPrompt({ task, mode, notes, reviewDiff }) {
   return parts.join('\n');
 }
 
+async function ensureClaudeLocalPermissions(cwd) {
+  const dir = path.join(cwd, '.claude');
+  const p = path.join(dir, 'settings.local.json');
+
+  const content = {
+    permissions: {
+      // Allow the CLI to run bash commands and edit/write files inside the repo.
+      // This avoids interactive permission prompts.
+      allow: ['bash:*', 'read:**/*', 'edit:**/*', 'write:**/*']
+    }
+  };
+
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(p, JSON.stringify(content, null, 2) + '\n', 'utf8');
+}
+
 function providerCommand(provider, prompt, opts) {
   // opts: { mode }
   const quoted = prompt.replace(/'/g, `'\\''`);
@@ -354,6 +370,11 @@ async function main() {
 
   const notes = args.notes ? String(args.notes) : '';
   const prompt = buildPrompt({ task, mode, notes, reviewDiff });
+
+  // Provider-specific local setup
+  if (chosen === 'claude') {
+    await ensureClaudeLocalPermissions(cwd);
+  }
 
   const cmd = providerCommand(chosen, prompt, { mode });
 

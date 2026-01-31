@@ -5,6 +5,9 @@ dist/
 # Logs
 *.log
 
+# Claude Code local permissions
+.claude/settings.local.json
+
 # OpenClaw bootstrap/identity files (not part of PM-as-Files repo)
 AGENTS.md
 BOOTSTRAP.md
