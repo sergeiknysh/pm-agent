@@ -1,10 +1,24 @@
 import Fastify from 'fastify';
+import type { FastifyReply, FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
+import cookie from '@fastify/cookie';
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { TaskRepo } from './pm/repo.js';
 import type { TaskPriority, TaskStatus } from './pm/types.js';
+import {
+  createSession,
+  getSessionTtlMs,
+  loadSession,
+  loadUsers,
+  resolvePmRoot,
+  resolveSecretsRoot,
+  verifyPassword,
+  deleteSession
+} from './auth.js';
+import './auth-types.js';
 
 const STATUS_VALUES: TaskStatus[] = ['todo', 'doing', 'blocked', 'done'];
 const PRIORITY_VALUES: TaskPriority[] = ['P0', 'P1', 'P2', 'P3'];
@@ -67,12 +81,22 @@ function pickPatch(body: unknown): {
   return out;
 }
 
-async function main(): Promise<void> {
+type ServerOptions = {
+  pmRoot?: string;
+  secretsRoot?: string;
+  sessionTtlMs?: number;
+  cookieSecure?: boolean;
+};
+
+export async function buildApp(opts: ServerOptions = {}) {
   const app = Fastify({ logger: true });
 
-  const pmRoot = process.env.PM_ROOT
-    ? path.resolve(process.env.PM_ROOT)
-    : path.join(process.cwd(), 'pm');
+  const pmRoot = opts.pmRoot ?? resolvePmRoot();
+  const secretsRoot = opts.secretsRoot ?? resolveSecretsRoot();
+  const sessionTtlMs = opts.sessionTtlMs ?? getSessionTtlMs();
+  const cookieSecure =
+    opts.cookieSecure ??
+    (process.env.PM_SESSION_SECURE === '1' || process.env.PM_SESSION_SECURE === 'true');
 
   const repo = new TaskRepo({ pmRoot });
 
@@ -80,6 +104,35 @@ async function main(): Promise<void> {
     await app.register(cors, {
       origin: process.env.CORS_ORIGIN ?? true
     });
+  }
+
+  await app.register(cookie);
+
+  app.addHook('preHandler', async (req) => {
+    const sessionId = req.cookies?.pm_session;
+    if (!sessionId) return;
+    const session = await loadSession(secretsRoot, sessionId);
+    if (!session) return;
+    req.sessionId = sessionId;
+    req.user = { username: session.username, roles: session.roles };
+  });
+
+  async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
+    if (!req.user) {
+      reply.status(401).send({ ok: false, error: 'Unauthorized' });
+      return;
+    }
+  }
+
+  async function requireAdmin(req: FastifyRequest, reply: FastifyReply) {
+    if (!req.user) {
+      reply.status(401).send({ ok: false, error: 'Unauthorized' });
+      return;
+    }
+    if (!req.user.roles.includes('admin')) {
+      reply.status(403).send({ ok: false, error: 'Forbidden' });
+      return;
+    }
   }
 
   app.get('/', async () => {
@@ -111,12 +164,12 @@ async function main(): Promise<void> {
     return;
   });
 
-  app.post('/api/refresh', async () => {
+  app.post('/api/refresh', { preHandler: requireAuth }, async () => {
     const { entries } = await repo.writeIndexFile();
     return { ok: true, count: entries.length };
   });
 
-  app.post('/api/task/:id/status', async (req) => {
+  app.post('/api/task/:id/status', { preHandler: requireAuth }, async (req) => {
     const id = (req.params as any).id as string;
     const patch = pickPatch(req.body);
 
@@ -129,7 +182,7 @@ async function main(): Promise<void> {
     return { ok: true, task: updated.meta };
   });
 
-  app.patch('/api/task/:id', async (req) => {
+  app.patch('/api/task/:id', { preHandler: requireAuth }, async (req) => {
     const id = (req.params as any).id as string;
     const patch = pickPatch(req.body);
 
@@ -140,6 +193,57 @@ async function main(): Promise<void> {
     return { ok: true, task: updated.meta };
   });
 
+  app.post('/api/auth/login', async (req, reply) => {
+    const body = req.body as Record<string, unknown> | null;
+    const username = typeof body?.username === 'string' ? body.username.trim() : '';
+    const password = typeof body?.password === 'string' ? body.password : '';
+    if (!username || !password) {
+      reply.status(400).send({ ok: false, error: 'username and password required' });
+      return;
+    }
+
+    const users = await loadUsers(pmRoot);
+    const user = users.find((u) => u.username === username);
+    if (!user) {
+      reply.status(401).send({ ok: false, error: 'Invalid credentials' });
+      return;
+    }
+
+    const ok = await verifyPassword(secretsRoot, username, password);
+    if (!ok) {
+      reply.status(401).send({ ok: false, error: 'Invalid credentials' });
+      return;
+    }
+
+    const session = await createSession(secretsRoot, user, sessionTtlMs);
+    reply.setCookie('pm_session', session.id, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: cookieSecure,
+      path: '/',
+      maxAge: Math.floor(sessionTtlMs / 1000)
+    });
+
+    reply.send({ ok: true, user: { username: user.username, roles: user.roles } });
+  });
+
+  app.post('/api/auth/logout', async (req, reply) => {
+    const sessionId = req.cookies?.pm_session;
+    if (sessionId) {
+      await deleteSession(secretsRoot, sessionId);
+    }
+    reply.clearCookie('pm_session', { path: '/' });
+    reply.send({ ok: true });
+  });
+
+  app.get('/api/me', async (req, reply) => {
+    if (!req.user) {
+      reply.status(401).send({ ok: false, error: 'Unauthorized' });
+      return;
+    }
+    reply.send({ ok: true, user: req.user });
+  });
+
   // Error handling: return JSON consistently.
   app.setErrorHandler((err, _req, reply) => {
     const msg = err instanceof Error ? err.message : String(err);
@@ -147,14 +251,21 @@ async function main(): Promise<void> {
     reply.status(statusCode).send({ ok: false, error: msg });
   });
 
+  return app;
+}
+
+async function main(): Promise<void> {
+  const app = await buildApp();
   const host = process.env.HOST ?? '127.0.0.1';
   const port = process.env.PORT ? Number(process.env.PORT) : 8787;
-
   await app.listen({ host, port });
 }
 
-main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error(err);
-  process.exit(1);
-});
+const isMain = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMain) {
+  main().catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(err);
+    process.exit(1);
+  });
+}
