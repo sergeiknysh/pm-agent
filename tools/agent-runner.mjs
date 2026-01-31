@@ -165,6 +165,17 @@ function addMinutesIso(iso, mins) {
   return dt.toISOString();
 }
 
+async function resolveDefaultBaseRef(preferred) {
+  if (preferred) return preferred;
+  // Prefer main if it exists, else master.
+  const hasMain = await runBash(`cd ${shell(WORKSPACE)} && git rev-parse --verify main >/dev/null 2>&1`, { cwd: WORKSPACE });
+  if (hasMain.code === 0) return 'main';
+  const hasMaster = await runBash(`cd ${shell(WORKSPACE)} && git rev-parse --verify master >/dev/null 2>&1`, { cwd: WORKSPACE });
+  if (hasMaster.code === 0) return 'master';
+  // fallback
+  return 'HEAD';
+}
+
 async function ensureWorktree(branch, dir, base = 'main') {
   // Create worktree if not present.
   const { code } = await runBash(`cd ${shell(WORKSPACE)} && git worktree list --porcelain | grep -F "worktree ${dir}" >/dev/null 2>&1`, { cwd: WORKSPACE });
@@ -254,7 +265,7 @@ async function main() {
   if (!task) {
     die(
       [
-        'Usage: node tools/agent-runner.mjs --task "..." [--provider codex|claude|gemini] [--mode implement|review] [--branch name] [--workdir /tmp/... ] [--base main|master] [--no-worktree] [--notes "..."] [--review-diff <baseRef>] [--force]',
+        'Usage: node tools/agent-runner.mjs --task "..." [--provider codex|claude|gemini] [--mode implement|review] [--branch name] [--workdir /tmp/... ] [--base auto|main|master] [--no-worktree] [--notes "..."] [--review-diff auto|<baseRef>] [--force]',
         '',
         'Examples:',
         '  node tools/agent-runner.mjs --task "Auth backend"',
@@ -316,7 +327,7 @@ async function main() {
 
   // Worktree
   const noWorktree = !!args['no-worktree'];
-  const base = args.base ? String(args.base) : 'main';
+  const base = await resolveDefaultBaseRef(args.base ? String(args.base) : null);
 
   const runId = crypto.randomBytes(4).toString('hex');
   const branch = args.branch ? String(args.branch) : `feat/${pickDefaultBranchSlug(task)}-${runId}`;
@@ -331,7 +342,9 @@ async function main() {
   // Optional: include diff for review mode
   let reviewDiff = '';
   if (args['review-diff']) {
-    const baseRef = String(args['review-diff']);
+    const baseRef = args['review-diff'] === 'auto'
+      ? await resolveDefaultBaseRef(null)
+      : String(args['review-diff']);
     const r = await runBash(`cd ${shell(cwd)} && git diff ${shell(baseRef)}..HEAD`, { cwd });
     if (r.code !== 0) {
       die(`Failed to compute diff vs ${baseRef}:\n${r.err || r.out}`);

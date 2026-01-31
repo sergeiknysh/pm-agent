@@ -13,6 +13,24 @@
   },
   "runs": [
     {
+      "id": "0c539a28",
+      "at": "2026-01-31T13:36:01.377Z",
+      "provider": "claude",
+      "mode": "review",
+      "task": "Smoke review auto",
+      "branch": null,
+      "workdir": "/home/sergei/workspace"
+    },
+    {
+      "id": "3ba5732f",
+      "at": "2026-01-31T13:35:56.771Z",
+      "provider": "claude",
+      "mode": "implement",
+      "task": "Smoke base auto",
+      "branch": null,
+      "workdir": "/home/sergei/workspace"
+    },
+    {
       "id": "3dab9088",
       "at": "2026-01-31T13:28:10.001Z",
       "provider": "claude",
