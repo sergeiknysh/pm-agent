@@ -26,6 +26,13 @@ const WORKSPACE = process.cwd();
 const STATE_PATH = path.join(WORKSPACE, 'tools', 'agent-state.json');
 const LOCK_PATH = path.join(WORKSPACE, 'tools', 'agent-lock.json');
 
+// Ensure common Node/NVM global bins are visible even when shells don't source ~/.bashrc.
+// This is important for OpenClaw exec sessions.
+const NVM_BIN = '/home/sergei/.nvm/versions/node/v22.22.0/bin';
+if (process.env.PATH && !process.env.PATH.split(':').includes(NVM_BIN)) {
+  process.env.PATH = `${NVM_BIN}:${process.env.PATH}`;
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
