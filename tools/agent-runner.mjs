@@ -268,10 +268,10 @@ function providerCommand(provider, prompt, opts) {
   const quoted = prompt.replace(/'/g, `'\\''`);
 
   if (provider === 'codex') {
-    // Worktrees require writing into the main repo's .git/worktrees/* directory.
-    // The default sandbox (workspace-write) may block that, so we use a more permissive sandbox.
-    // NOTE: This assumes you're running in a trusted local environment.
-    return `codex --ask-for-approval never --sandbox danger-full-access exec '${quoted}'`;
+    // Worktrees + commits require writing to .git/worktrees/* in the main repo.
+    // Codex sometimes downgrades sandbox; easiest is to bypass sandbox entirely in this trusted local env.
+    // WARNING: extremely powerful. Do not use on untrusted repos.
+    return `codex --dangerously-bypass-approvals-and-sandbox exec '${quoted}'`;
   }
 
   if (provider === 'claude') {
