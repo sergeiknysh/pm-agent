@@ -24,6 +24,7 @@ import { spawn } from 'node:child_process';
 
 const WORKSPACE = process.cwd();
 const STATE_PATH = path.join(WORKSPACE, 'tools', 'agent-state.json');
+const LOCK_PATH = path.join(WORKSPACE, 'tools', 'agent-lock.json');
 
 function nowIso() {
   return new Date().toISOString();
@@ -42,7 +43,7 @@ function parseArgs(argv) {
       const key = a.slice(2);
       const next = argv[i + 1];
       // boolean flags
-      if (key === 'no-worktree' || key === 'dry-run') {
+      if (key === 'no-worktree' || key === 'dry-run' || key === 'force') {
         out[key] = true;
       } else {
         if (next == null || next.startsWith('--')) die(`Missing value for --${key}`);
@@ -68,6 +69,38 @@ async function readJson(p, fallback) {
 async function writeJson(p, obj) {
   await fs.mkdir(path.dirname(p), { recursive: true });
   await fs.writeFile(p, JSON.stringify(obj, null, 2) + '\n', 'utf8');
+}
+
+async function tryAcquireLock(lockKey, holder, ttlMinutes, force) {
+  const now = Date.now();
+  const ttlMs = Math.max(1, ttlMinutes) * 60 * 1000;
+
+  const lock = await readJson(LOCK_PATH, { version: 1, locks: {} });
+  lock.locks ||= {};
+
+  const existing = lock.locks[lockKey];
+  if (existing) {
+    const exp = new Date(existing.expiresAt || 0).getTime();
+    const expired = !Number.isFinite(exp) || exp <= now;
+    if (!expired && !force) {
+      return { ok: false, reason: `locked by ${existing.holder} until ${existing.expiresAt}` };
+    }
+  }
+
+  const expiresAt = new Date(now + ttlMs).toISOString();
+  lock.locks[lockKey] = { holder, acquiredAt: new Date(now).toISOString(), expiresAt };
+  await writeJson(LOCK_PATH, lock);
+  return { ok: true, expiresAt };
+}
+
+async function releaseLock(lockKey, holder) {
+  const lock = await readJson(LOCK_PATH, { version: 1, locks: {} });
+  lock.locks ||= {};
+  const existing = lock.locks[lockKey];
+  if (existing && existing.holder === holder) {
+    delete lock.locks[lockKey];
+    await writeJson(LOCK_PATH, lock);
+  }
 }
 
 function pickDefaultBranchSlug(task) {
@@ -152,7 +185,7 @@ function shell(s) {
   return `'${String(s).replace(/'/g, `'\\''`)}'`;
 }
 
-function buildPrompt({ task, mode, notes }) {
+function buildPrompt({ task, mode, notes, reviewDiff }) {
   const parts = [];
   parts.push(`Task: ${task}`);
   parts.push('');
@@ -167,6 +200,14 @@ function buildPrompt({ task, mode, notes }) {
   if (mode === 'review') {
     parts.push('Mode: REVIEW');
     parts.push('- Do not implement. Only review and propose changes + tests.');
+
+    if (reviewDiff) {
+      parts.push('');
+      parts.push('Diff to review (git diff):');
+      parts.push('```diff');
+      parts.push(reviewDiff.trimEnd());
+      parts.push('```');
+    }
   } else {
     parts.push('Mode: IMPLEMENT');
     parts.push('- Implement end-to-end and verify with tests.');
@@ -213,7 +254,7 @@ async function main() {
   if (!task) {
     die(
       [
-        'Usage: node tools/agent-runner.mjs --task "..." [--provider codex|claude|gemini] [--mode implement|review] [--branch name] [--workdir /tmp/... ] [--base main] [--no-worktree] [--notes "..."]',
+        'Usage: node tools/agent-runner.mjs --task "..." [--provider codex|claude|gemini] [--mode implement|review] [--branch name] [--workdir /tmp/... ] [--base main|master] [--no-worktree] [--notes "..."] [--review-diff <baseRef>] [--force]',
         '',
         'Examples:',
         '  node tools/agent-runner.mjs --task "Auth backend"',
@@ -225,6 +266,21 @@ async function main() {
 
   const mode = (args.mode || 'implement').toString();
   const providerPref = args.provider ? String(args.provider) : null;
+
+  // Locking: avoid multiple concurrent executors.
+  // We only lock implement mode (review is cheap).
+  const lockKey = 'executor';
+  const lockHolder = `${process.pid}:${crypto.randomBytes(3).toString('hex')}`;
+  const force = !!args.force;
+  const lockTtlMinutes = args['lock-ttl-min'] ? Number(args['lock-ttl-min']) : 120;
+  let lockAcquired = false;
+  if (mode !== 'review') {
+    const got = await tryAcquireLock(lockKey, lockHolder, lockTtlMinutes, force);
+    if (!got.ok) {
+      die(`Another executor is running (${got.reason}). Use --force to override.`);
+    }
+    lockAcquired = true;
+  }
 
   const state = await readJson(STATE_PATH, {
     version: 1,
@@ -272,8 +328,19 @@ async function main() {
 
   const cwd = noWorktree ? WORKSPACE : workdir;
 
+  // Optional: include diff for review mode
+  let reviewDiff = '';
+  if (args['review-diff']) {
+    const baseRef = String(args['review-diff']);
+    const r = await runBash(`cd ${shell(cwd)} && git diff ${shell(baseRef)}..HEAD`, { cwd });
+    if (r.code !== 0) {
+      die(`Failed to compute diff vs ${baseRef}:\n${r.err || r.out}`);
+    }
+    reviewDiff = r.out;
+  }
+
   const notes = args.notes ? String(args.notes) : '';
-  const prompt = buildPrompt({ task, mode, notes });
+  const prompt = buildPrompt({ task, mode, notes, reviewDiff });
 
   const cmd = providerCommand(chosen, prompt, { mode });
 
@@ -299,7 +366,10 @@ async function main() {
     ) + '\n'
   );
 
-  if (args['dry-run']) return;
+  if (args['dry-run']) {
+    if (lockAcquired) await releaseLock(lockKey, lockHolder);
+    return;
+  }
 
   // Run provider command, inheriting stdio so OpenClaw can stream.
   const child = spawn('bash', ['-lc', cmd], {
@@ -318,6 +388,7 @@ async function main() {
   const exitCode = await new Promise((resolve) => child.on('close', resolve));
 
   if (exitCode !== 0) {
+    if (lockAcquired) await releaseLock(lockKey, lockHolder);
     if (isRateLimitText(errBuf)) {
       // Set cooldown for this provider
       const prevCd = state.providers?.[chosen]?.cooldownUntil;
@@ -331,6 +402,8 @@ async function main() {
     }
     die(`Provider ${chosen} exited with code ${exitCode}`, exitCode || 1);
   }
+
+  if (lockAcquired) await releaseLock(lockKey, lockHolder);
 }
 
 main().catch((err) => {

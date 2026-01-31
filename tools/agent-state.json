@@ -13,6 +13,15 @@
   },
   "runs": [
     {
+      "id": "3dab9088",
+      "at": "2026-01-31T13:28:10.001Z",
+      "provider": "claude",
+      "mode": "review",
+      "task": "Smoke review-diff",
+      "branch": null,
+      "workdir": "/home/sergei/workspace"
+    },
+    {
       "id": "f8883fc5",
       "at": "2026-01-31T13:18:03.431Z",
       "provider": "claude",

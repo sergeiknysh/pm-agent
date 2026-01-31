@@ -2,6 +2,9 @@
 
 Этот документ описывает **рабочий протокол** для командной разработки с помощью нескольких агентов (Codex CLI, Claude Code, Gemini CLI, Cursor) и OpenClaw.
 
+Reference/чеклист best practices вынесен отдельно:
+- `pm/docs/vibecoding-best-practices.md`
+
 Цель: **маленькие диффы, воспроизводимые проверки, минимум хаоса**.
 
 ---
