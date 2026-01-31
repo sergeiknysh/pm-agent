@@ -16,6 +16,27 @@
 - Проекты: `pm/projects/*/project.md`
 - Индекс для UI: `pm/_meta/index.json`
 
+## Docker (dev): hot reload backend + frontend
+В репозитории есть `docker-compose.yml` для dev-режима:
+- Backend: `tsc --watch` + `node --watch` (автопересборка/перезапуск)
+- Frontend: `vite dev` (HMR)
+- Данные задач лежат в `./pm` (bind mount) и сохраняются между перезапусками контейнеров
+- Секреты/сессии (argon2 shadow + sessions) лежат в `./.pm-secrets` (bind mount) и тоже сохраняются
+
+Запуск:
+```bash
+docker compose up --build
+```
+
+URL:
+- API: http://localhost:8787
+- Web UI: http://localhost:5173
+
+Остановка:
+```bash
+docker compose down
+```
+
 ## Переменные окружения
 - `PM_ROOT` — путь к папке `pm/` (по умолчанию: `./pm`).
 - `PM_SECRETS_ROOT` — путь к секретам (по умолчанию: `/home/sergei/.pm-secrets`).

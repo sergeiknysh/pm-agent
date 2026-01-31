@@ -1,0 +1,57 @@
+services:
+  api:
+    image: pm-agent-api-dev
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    working_dir: /app
+    environment:
+      HOST: 0.0.0.0
+      PORT: "8787"
+      PM_ROOT: /app/pm
+      PM_SECRETS_ROOT: /app/.pm-secrets
+      # In dev you might want non-secure cookies (http)
+      PM_SESSION_SECURE: "0"
+      # Optional: enable CORS for browser-based UI
+      CORS: "1"
+      CORS_ORIGIN: "http://localhost:5173"
+    ports:
+      - "8787:8787"
+    volumes:
+      - .:/app
+      - api_node_modules:/app/node_modules
+      - ./.pm-secrets:/app/.pm-secrets
+    command: >
+      sh -lc '
+        npm install &&
+        npm run watch:tsc &
+        while [ ! -f dist/src/server.js ]; do sleep 0.2; done;
+        node --watch dist/src/server.js
+      '
+
+  web:
+    image: pm-agent-web-dev
+    build:
+      context: ./web
+      dockerfile: ../docker/Dockerfile.web
+    working_dir: /app/web
+    environment:
+      VITE_API_PROXY_TARGET: http://api:8787
+      CHOKIDAR_USEPOLLING: "true"
+      CHOKIDAR_INTERVAL: "100"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    volumes:
+      - .:/app
+      - web_node_modules:/app/web/node_modules
+    command: >
+      sh -lc '
+        npm install &&
+        npm run dev -- --host 0.0.0.0 --port 5173
+      '
+
+volumes:
+  api_node_modules:
+  web_node_modules:

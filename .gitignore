@@ -17,6 +17,16 @@ SOUL.md
 TOOLS.md
 USER.md
 
+# Agent runner local state
+tools/agent-lock.json
+tools/agent-state.json
+
 # PM meta: keep index.json, ignore per-chat telegram context
 pm/_meta/*
 !pm/_meta/index.json
+
+# Dev secrets/session store (mounted in docker-compose)
+.pm-secrets/
+
+# Local curl cookies
+cookies.txt

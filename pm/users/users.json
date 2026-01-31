@@ -1,3 +1,10 @@
 {
-  "users": []
+  "users": [
+    {
+      "username": "admin",
+      "roles": [
+        "admin"
+      ]
+    }
+  ]
 }

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "watch:tsc": "tsc -p tsconfig.json --watch --preserveWatchOutput",
     "test": "npm run build && node --test dist/test/**/*.js",
     "pm": "node dist/src/cli.js",
     "server": "node dist/src/server.js",
