@@ -30,3 +30,6 @@ estimate: 2h
 ```
 
 Подробный план: см. `pm/PLAN.md`.
+
+## Документация
+См. `pm/docs/README.md`.
