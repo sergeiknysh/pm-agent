@@ -190,8 +190,12 @@ async function ensureWorktree(branch, dir, base = 'main') {
 
   await runBash(`cd ${shell(WORKSPACE)} && git fetch --all --prune`, { cwd: WORKSPACE });
 
-  // Prefer creating a new branch off base.
-  const cmd = `cd ${shell(WORKSPACE)} && git worktree add -b ${shell(branch)} ${shell(dir)} ${shell(base)}`;
+  // If branch already exists, attach worktree to it. Otherwise create it off base.
+  const exists = await runBash(`cd ${shell(WORKSPACE)} && git show-ref --verify --quiet refs/heads/${branch}`, { cwd: WORKSPACE });
+  const cmd = exists.code === 0
+    ? `cd ${shell(WORKSPACE)} && git worktree add ${shell(dir)} ${shell(branch)}`
+    : `cd ${shell(WORKSPACE)} && git worktree add -b ${shell(branch)} ${shell(dir)} ${shell(base)}`;
+
   const r = await runBash(cmd, { cwd: WORKSPACE });
   if (r.code !== 0) {
     die(`Failed to create worktree:\n${r.err || r.out}`);
