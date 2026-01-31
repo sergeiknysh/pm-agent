@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "providers": {
+    "codex": {
+      "cooldownUntil": null
+    },
+    "claude": {
+      "cooldownUntil": null
+    },
+    "gemini": {
+      "cooldownUntil": null
+    }
+  },
+  "runs": [
+    {
+      "id": "f8883fc5",
+      "at": "2026-01-31T13:18:03.431Z",
+      "provider": "claude",
+      "mode": "implement",
+      "task": "Smoke test",
+      "branch": null,
+      "workdir": "/home/sergei/workspace"
+    }
+  ]
+}
