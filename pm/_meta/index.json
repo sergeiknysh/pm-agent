@@ -1,0 +1,165 @@
+[
+  {
+    "id": "TASK-0002",
+    "title": "Core library: Task Spec v1 parser + CRUD",
+    "status": "done",
+    "project": "pm-as-files",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "pm",
+      "files",
+      "typescript"
+    ],
+    "updated": "2026-01-31T01:13:30+01:00",
+    "path": "pm/projects/pm-as-files/tasks/TASK-0002-core-library.md"
+  },
+  {
+    "id": "TASK-0003",
+    "title": "CLI + index generator for PM-as-Files",
+    "status": "done",
+    "project": "pm-as-files",
+    "priority": "P2",
+    "due": null,
+    "tags": [
+      "pm",
+      "cli"
+    ],
+    "updated": "2026-01-31T01:13:30+01:00",
+    "path": "pm/projects/pm-as-files/tasks/TASK-0003-cli-and-index.md"
+  },
+  {
+    "id": "TASK-0010",
+    "title": "@vextaibot Test triage P2 #dev due:2026-02-01",
+    "status": "todo",
+    "project": "vextaibot",
+    "priority": "P2",
+    "due": "2026-02-01",
+    "tags": [
+      "dev"
+    ],
+    "updated": "2026-01-30T23:35:47.358Z",
+    "path": "pm/projects/vextaibot/tasks/TASK-0010-vextaibot-test-triage-p2-dev-due-2026-02-01.md"
+  },
+  {
+    "id": "TASK-0006",
+    "title": "Telegram команды: /add /today /inbox /done (через Vexta) — дизайн и реализация",
+    "status": "doing",
+    "project": "vextaibot",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "telegram",
+      "pm"
+    ],
+    "updated": "2026-01-31T01:14:10+01:00",
+    "path": "pm/projects/vextaibot/tasks/TASK-0006-telegram-add-today-inbox-done-vexta.md"
+  },
+  {
+    "id": "TASK-0007",
+    "title": "Telegram inline buttons: ToDo/Doing/Done/Snooze 1d",
+    "status": "doing",
+    "project": "vextaibot",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "telegram",
+      "pm"
+    ],
+    "updated": "2026-01-31T01:14:10+01:00",
+    "path": "pm/projects/vextaibot/tasks/TASK-0007-telegram-inline-buttons-todo-doing-done-snooze-1d.md"
+  },
+  {
+    "id": "TASK-0009",
+    "title": "Backend для Web UI: read index + endpoint change status (правка md)",
+    "status": "doing",
+    "project": "vextaibot",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "web",
+      "api"
+    ],
+    "updated": "2026-01-31T01:14:10+01:00",
+    "path": "pm/projects/vextaibot/tasks/TASK-0009-backend-web-ui-read-index-endpoint-change-status-m.md"
+  },
+  {
+    "id": "TASK-0008",
+    "title": "Web UI v1: Kanban доска по status (todo/doing/blocked/done)",
+    "status": "doing",
+    "project": "vextaibot",
+    "priority": "P2",
+    "due": null,
+    "tags": [
+      "web",
+      "ui"
+    ],
+    "updated": "2026-01-31T01:14:10+01:00",
+    "path": "pm/projects/vextaibot/tasks/TASK-0008-web-ui-v1-kanban-status-todo-doing-blocked-done.md"
+  },
+  {
+    "id": "TASK-0003",
+    "title": "Сделать операции: create/update status/due/tags + запись updated + лог в файле",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P0",
+    "due": null,
+    "tags": [
+      "core"
+    ],
+    "updated": "2026-01-31T00:36:30.000Z",
+    "path": "pm/projects/vextaibot/tasks/TASK-0003-create-update-status-due-tags-updated.md"
+  },
+  {
+    "id": "TASK-0002",
+    "title": "Сделать парсер YAML frontmatter + загрузчик задач из pm/",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P0",
+    "due": null,
+    "tags": [
+      "core"
+    ],
+    "updated": "2026-01-31T00:36:00.000Z",
+    "path": "pm/projects/vextaibot/tasks/TASK-0002-yaml-frontmatter-pm.md"
+  },
+  {
+    "id": "TASK-0004",
+    "title": "Inbox flow: append в pm/inbox.md + triage (создание task-файлов из строк)",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P0",
+    "due": null,
+    "tags": [
+      "inbox"
+    ],
+    "updated": "2026-01-30T23:50:00.000Z",
+    "path": "pm/projects/vextaibot/tasks/TASK-0004-inbox-flow-append-pm-inbox-md-triage-task.md"
+  },
+  {
+    "id": "TASK-0005",
+    "title": "Генератор pm/_meta/index.json из всех задач",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P0",
+    "due": null,
+    "tags": [
+      "index"
+    ],
+    "updated": "2026-01-30T23:40:30.000Z",
+    "path": "pm/projects/vextaibot/tasks/TASK-0005-pm-meta-index-json.md"
+  },
+  {
+    "id": "TASK-0001",
+    "title": "Определить Task Spec v1 и фронтматтер поля (закрепить в документации)",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "spec"
+    ],
+    "updated": "2026-01-31T01:13:30+01:00",
+    "path": "pm/projects/vextaibot/tasks/TASK-0001-task-spec-v1.md"
+  }
+]

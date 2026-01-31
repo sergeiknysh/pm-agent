@@ -1,0 +1,19 @@
+# Node
+node_modules/
+dist/
+
+# Logs
+*.log
+
+# OpenClaw bootstrap/identity files (not part of PM-as-Files repo)
+AGENTS.md
+BOOTSTRAP.md
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
+
+# PM meta: keep index.json, ignore per-chat telegram context
+pm/_meta/*
+!pm/_meta/index.json
