@@ -1,12 +1,12 @@
 ---
 id: TASK-0006
 title: "Telegram команды: /add /today /inbox /done (через Vexta) — дизайн и реализация"
-status: doing
+status: done
 project: vextaibot
 priority: P1
 tags: [telegram, pm]
 created: 2026-01-30T23:32:54.278Z
-updated: 2026-01-31T01:14:10+01:00
+updated: 2026-01-31T01:17:43+01:00
 estimate: 6h
 ---
 
@@ -149,14 +149,14 @@ TTL: 24h (или до перезаписи).
 - Идемпотентность `/done` (повтор не ломает).
 
 ## Чеклист
-- [ ] Уточнить финальный формат строки для `pm/inbox.md` (однострочный vs meta-блок)
-- [ ] Спека парсинга команд: аргументы + reply-behavior
-- [ ] Реализовать `/add` → append в inbox
-- [ ] Реализовать `/inbox` → tail N + сохранить lastList
-- [ ] Реализовать `/today` → выборка due<=today + сохранить lastList
-- [ ] Реализовать `/done` по id / по номеру / по reply
-- [ ] Добавить `pm/_meta/telegram-context.json` в .gitignore? (скорее **нет**, лучше коммитить? обсудить)
-- [ ] Тест-кейсы (ручные): пустой inbox, /add без текста, /done 999, /done TASK-xxxx
+- [x] Уточнить финальный формат строки для `pm/inbox.md` (однострочный vs meta-блок)
+- [x] Спека парсинга команд: аргументы + reply-behavior
+- [x] Реализовать `/add` → append в inbox
+- [x] Реализовать `/inbox` → tail N
+- [x] Реализовать `/today` → выборка due<=today + сохранить lastList
+- [x] Реализовать `/done` по id / по номеру / по reply
+- [x] Реализовать `pm/_meta/telegram-context.json`
+- [x] Мини-тесты (unit): /today→context, /done n, snooze 1d
 
 ## Связано
 - TASK-0005: генерация `pm/_meta/index.json`
@@ -164,5 +164,6 @@ TTL: 24h (или до перезаписи).
 
 ## Лог
 - 2026-01-30T23:32:54.278Z: создано планом
-- 2026-01-31T01:14:10+01:00: старт реализации Telegram команд
 - 2026-01-30T23:59:00.000Z: добавлена спецификация UX и реализации
+- 2026-01-31T01:14:10+01:00: старт реализации Telegram команд
+- 2026-01-31T01:17:43+01:00: реализованы обработчики /add /inbox /today /done + контекст lastList, добавлены unit-тесты

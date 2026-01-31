@@ -1,12 +1,14 @@
 ---
 id: TASK-0009
-title: "Backend для Web UI: read index + endpoint change status (правка md)"
-status: doing
+title: 'Backend для Web UI: read index + endpoint change status (правка md)'
+status: done
 project: vextaibot
+created: '2026-01-30T23:32:54.278Z'
+updated: '2026-01-31T00:19:00.456Z'
 priority: P1
-tags: [web, api]
-created: 2026-01-30T23:32:54.278Z
-updated: 2026-01-31T01:14:10+01:00
+tags:
+  - web
+  - api
 estimate: 6h
 ---
 
@@ -71,15 +73,29 @@ estimate: 6h
 - **Безопасность (локально):** по умолчанию слушать `127.0.0.1`.
 - **CORS:** только для dev (если UI отдельно), иначе не нужен.
 
+## Как запустить (локально)
+
+```bash
+cd /home/sergei/workspace
+npm install
+npm run build
+npm run server
+# server listens on http://127.0.0.1:8787
+```
+
+Опции:
+- `PORT=8787 HOST=127.0.0.1 PM_ROOT=/abs/path/to/pm npm run server`
+- включить CORS для отдельного UI: `CORS=1 CORS_ORIGIN=http://localhost:5173 npm run server`
+
 ## Чеклист
 
-- [ ] Выбрать стек: Fastify + gray-matter + zod (валидация)
-- [ ] Реализовать чтение `pm/_meta/index.json`
-- [ ] Реализовать `POST /api/task/:id/status` (atomic write + updated)
-- [ ] Реализовать `PATCH /api/task/:id` (whitelist полей)
-- [ ] Обновление `index.json` после записи (полная реген достаточно для v1)
-- [ ] Добавить `POST /api/refresh` для удобства
-- [ ] README: как запустить сервер, где лежит pm-root
+- [x] Выбрать стек: Fastify (валидация минимальная)
+- [x] Реализовать чтение `pm/_meta/index.json`
+- [x] Реализовать `POST /api/task/:id/status` (atomic write + updated)
+- [x] Реализовать `PATCH /api/task/:id` (whitelist полей)
+- [x] Обновление `index.json` после записи (полная реген достаточно для v1)
+- [x] Добавить `POST /api/refresh` для удобства
+- [x] README: как запустить сервер, где лежит pm-root
 
 ## Acceptance Criteria
 
@@ -89,6 +105,7 @@ estimate: 6h
   - после смены статуса `GET /api/index` возвращает обновлённый статус
 
 ## Лог
+- 2026-01-31T01:17:21+01:00 реализован v1 backend API (Fastify) + атомарные записи + реген index.json
 - 2026-01-30T23:32:54.278Z: создано планом
 - 2026-01-31T01:14:10+01:00: старт реализации backend API для Web UI
 - 2026-01-31T00:40:00.000Z: уточнён план (выбран small server + контракты API)

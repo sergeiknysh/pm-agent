@@ -2,9 +2,10 @@
 import path from 'node:path';
 import process from 'node:process';
 import { TaskRepo } from './pm/repo.js';
+import { buildKanbanSummary, buildMvpProgress, formatKanbanSummaryText, formatMvpProgressText } from './pm/report.js';
 
 function usage(): never {
-  console.error(`pm CLI\n\nUsage:\n  pm list\n  pm create --project <p> --title <t> [--priority P1] [--due YYYY-MM-DD] [--tag x --tag y]\n  pm set <TASK-0001> status <todo|doing|blocked|done>\n  pm set <TASK-0001> due <YYYY-MM-DD>\n  pm log <TASK-0001> <text>\n  pm index\n`);
+  console.error(`pm CLI\n\nUsage:\n  pm list\n  pm create --project <p> --title <t> [--priority P1] [--due YYYY-MM-DD] [--tag x --tag y]\n  pm set <TASK-0001> status <todo|doing|blocked|done>\n  pm set <TASK-0001> due <YYYY-MM-DD>\n  pm log <TASK-0001> <text>\n  pm index\n  pm status [project]            # Kanban-сводка по статусам\n  pm progress [project]          # MVP прогресс по итерациям (A/B/C)\n  pm mvp [project]               # alias для progress\n`);
   process.exit(2);
 }
 
@@ -79,6 +80,20 @@ async function main() {
 
   if (cmd === 'index') {
     await repo.writeIndexFile();
+    return;
+  }
+
+  if (cmd === 'status') {
+    const project = rest[0] || 'vextaibot';
+    const sum = await buildKanbanSummary(repo, project);
+    console.log(formatKanbanSummaryText(sum));
+    return;
+  }
+
+  if (cmd === 'progress' || cmd === 'mvp') {
+    const project = rest[0] || 'vextaibot';
+    const iters = await buildMvpProgress(repo, project, { useWeights: true });
+    console.log(formatMvpProgressText(iters));
     return;
   }
 

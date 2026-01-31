@@ -18,9 +18,34 @@ export async function readText(p: string): Promise<string> {
   return await fs.readFile(p, 'utf8');
 }
 
+/**
+ * Atomic-ish write for local filesystem:
+ * - write to a temp file in the same directory
+ * - fsync the file
+ * - rename over the destination
+ *
+ * NOTE: This is intended for local dev on a single machine.
+ */
+export async function writeTextAtomic(p: string, content: string): Promise<void> {
+  const dir = path.dirname(p);
+  await ensureDir(dir);
+
+  const tmp = path.join(dir, `.${path.basename(p)}.${process.pid}.${Date.now()}.tmp`);
+
+  const fh = await fs.open(tmp, 'w');
+  try {
+    await fh.writeFile(content, 'utf8');
+    await fh.sync();
+  } finally {
+    await fh.close();
+  }
+
+  await fs.rename(tmp, p);
+}
+
 export async function writeText(p: string, content: string): Promise<void> {
-  await ensureDir(path.dirname(p));
-  await fs.writeFile(p, content, 'utf8');
+  // Default to atomic writes to avoid partially-written markdown/frontmatter.
+  await writeTextAtomic(p, content);
 }
 
 export async function walkFiles(rootDir: string, predicate?: (absPath: string) => boolean): Promise<string[]> {

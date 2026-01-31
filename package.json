@@ -5,9 +5,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "npm run build && node --test dist/test/**/*.js",
-    "pm": "node dist/src/cli.js"
+    "pm": "node dist/src/cli.js",
+    "server": "node dist/src/server.js"
   },
   "dependencies": {
+    "fastify": "^4.29.1",
+    "@fastify/cors": "^9.0.1",
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {

@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/api/client.ts","./src/api/types.ts","./src/ui/App.tsx","./src/ui/KanbanColumn.tsx","./src/ui/TaskCard.tsx"],"version":"5.9.3"}

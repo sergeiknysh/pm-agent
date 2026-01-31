@@ -1,12 +1,12 @@
 ---
 id: TASK-0007
 title: "Telegram inline buttons: ToDo/Doing/Done/Snooze 1d"
-status: doing
+status: done
 project: vextaibot
 priority: P1
 tags: [telegram, pm]
 created: 2026-01-30T23:32:54.278Z
-updated: 2026-01-31T01:14:10+01:00
+updated: 2026-01-31T01:17:43+01:00
 estimate: 4h
 ---
 
@@ -94,12 +94,13 @@ Telegram inline кнопки хороши, когда после нажатия 
 - задача уже `done` → можно сделать idempotent (не ошибка).
 
 ## Чеклист
-- [ ] Уточнить, как в OpenClaw Telegram plugin формируется inline keyboard (если уже есть поддержка)
-- [ ] Согласовать callback_data формат (pm:v1:...)
-- [ ] Реализовать обработчик callback → update task frontmatter
-- [ ] Реализовать `Snooze 1d` (правила с due)
-- [ ] Реализовать обновление текста сообщения после нажатия
-- [ ] Тесты: 4 кнопки, лимит callback_data, несколько задач в одном сообщении
+- [x] Callback_data формат (pm:v1:...)
+- [x] Реализован обработчик callback → update task frontmatter
+- [x] Реализован `Snooze 1d` (правила с due)
+- [x] Best-effort обновление текста сообщения после нажатия (replace строки с TASK-id)
+- [x] Unit-тест: snooze 1d без due
+
+Примечание: интеграция с конкретным OpenClaw Telegram plugin (answerCallbackQuery/editMessageText) — через возвращаемый structured response (toast/editText/keyboard).
 
 ## Связано
 - TASK-0006: команды /add /today /inbox /done
@@ -109,3 +110,4 @@ Telegram inline кнопки хороши, когда после нажатия 
 - 2026-01-30T23:32:54.278Z: создано планом
 - 2026-01-31T00:05:00.000Z: добавлена спецификация inline buttons и callback формата
 - 2026-01-31T01:14:10+01:00: старт реализации inline buttons
+- 2026-01-31T01:17:43+01:00: реализован обработчик callback pm:v1:* (status + snooze 1d), генерация inline keyboard

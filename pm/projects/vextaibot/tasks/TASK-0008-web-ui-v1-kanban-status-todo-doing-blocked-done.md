@@ -1,12 +1,12 @@
 ---
 id: TASK-0008
 title: "Web UI v1: Kanban доска по status (todo/doing/blocked/done)"
-status: doing
+status: done
 project: vextaibot
 priority: P2
 tags: [web, ui]
 created: 2026-01-30T23:32:54.278Z
-updated: 2026-01-31T01:14:10+01:00
+updated: 2026-01-31T01:18:11+01:00
 estimate: 8h
 ---
 
@@ -54,14 +54,14 @@ UI делаем как лёгкий SPA, который:
 
 ## Чеклист
 
-- [ ] Создать Vite app (React+TS)
-- [ ] Типы: `TaskIndexItem` (соответствует index.json)
-- [ ] Board layout: 4 columns
-- [ ] Render cards + basic styling
-- [ ] Drag&drop between columns (@dnd-kit)
-- [ ] On drop → call `POST /api/task/:id/status`
-- [ ] Optimistic update + toast/error state
-- [ ] Filters: project + search
+- [x] Создать Vite app (React+TS)
+- [x] Типы: `TaskIndexItem` (соответствует index.json)
+- [x] Board layout: 4 columns
+- [x] Render cards + basic styling
+- [x] Drag&drop between columns (@dnd-kit)
+- [x] On drop → call `POST /api/task/:id/status`
+- [x] Optimistic update + error state
+- [x] Filters: project + search
 - [ ] (Опционально) Side panel: fetch `GET /api/task/:id`
 
 ## Acceptance Criteria
@@ -73,3 +73,4 @@ UI делаем как лёгкий SPA, который:
 - 2026-01-30T23:32:54.278Z: создано планом
 - 2026-01-31T01:14:10+01:00: старт реализации Web UI
 - 2026-01-31T00:40:00.000Z: уточнён план UI (Vite+React+TS, dnd-kit, контракты)
+- 2026-01-31T01:18:11+01:00: реализован v1 Kanban UI (Vite+React+TS) + фильтры + drag&drop статус через API

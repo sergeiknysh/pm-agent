@@ -42,62 +42,6 @@
     "path": "pm/projects/vextaibot/tasks/TASK-0010-vextaibot-test-triage-p2-dev-due-2026-02-01.md"
   },
   {
-    "id": "TASK-0006",
-    "title": "Telegram команды: /add /today /inbox /done (через Vexta) — дизайн и реализация",
-    "status": "doing",
-    "project": "vextaibot",
-    "priority": "P1",
-    "due": null,
-    "tags": [
-      "telegram",
-      "pm"
-    ],
-    "updated": "2026-01-31T01:14:10+01:00",
-    "path": "pm/projects/vextaibot/tasks/TASK-0006-telegram-add-today-inbox-done-vexta.md"
-  },
-  {
-    "id": "TASK-0007",
-    "title": "Telegram inline buttons: ToDo/Doing/Done/Snooze 1d",
-    "status": "doing",
-    "project": "vextaibot",
-    "priority": "P1",
-    "due": null,
-    "tags": [
-      "telegram",
-      "pm"
-    ],
-    "updated": "2026-01-31T01:14:10+01:00",
-    "path": "pm/projects/vextaibot/tasks/TASK-0007-telegram-inline-buttons-todo-doing-done-snooze-1d.md"
-  },
-  {
-    "id": "TASK-0009",
-    "title": "Backend для Web UI: read index + endpoint change status (правка md)",
-    "status": "doing",
-    "project": "vextaibot",
-    "priority": "P1",
-    "due": null,
-    "tags": [
-      "web",
-      "api"
-    ],
-    "updated": "2026-01-31T01:14:10+01:00",
-    "path": "pm/projects/vextaibot/tasks/TASK-0009-backend-web-ui-read-index-endpoint-change-status-m.md"
-  },
-  {
-    "id": "TASK-0008",
-    "title": "Web UI v1: Kanban доска по status (todo/doing/blocked/done)",
-    "status": "doing",
-    "project": "vextaibot",
-    "priority": "P2",
-    "due": null,
-    "tags": [
-      "web",
-      "ui"
-    ],
-    "updated": "2026-01-31T01:14:10+01:00",
-    "path": "pm/projects/vextaibot/tasks/TASK-0008-web-ui-v1-kanban-status-todo-doing-blocked-done.md"
-  },
-  {
     "id": "TASK-0003",
     "title": "Сделать операции: create/update status/due/tags + запись updated + лог в файле",
     "status": "done",
@@ -150,6 +94,34 @@
     "path": "pm/projects/vextaibot/tasks/TASK-0005-pm-meta-index-json.md"
   },
   {
+    "id": "TASK-0006",
+    "title": "Telegram команды: /add /today /inbox /done (через Vexta) — дизайн и реализация",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "telegram",
+      "pm"
+    ],
+    "updated": "2026-01-31T01:17:43+01:00",
+    "path": "pm/projects/vextaibot/tasks/TASK-0006-telegram-add-today-inbox-done-vexta.md"
+  },
+  {
+    "id": "TASK-0007",
+    "title": "Telegram inline buttons: ToDo/Doing/Done/Snooze 1d",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "telegram",
+      "pm"
+    ],
+    "updated": "2026-01-31T01:17:43+01:00",
+    "path": "pm/projects/vextaibot/tasks/TASK-0007-telegram-inline-buttons-todo-doing-done-snooze-1d.md"
+  },
+  {
     "id": "TASK-0001",
     "title": "Определить Task Spec v1 и фронтматтер поля (закрепить в документации)",
     "status": "done",
@@ -161,5 +133,33 @@
     ],
     "updated": "2026-01-31T01:13:30+01:00",
     "path": "pm/projects/vextaibot/tasks/TASK-0001-task-spec-v1.md"
+  },
+  {
+    "id": "TASK-0009",
+    "title": "Backend для Web UI: read index + endpoint change status (правка md)",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "web",
+      "api"
+    ],
+    "updated": "2026-01-31T00:19:00.456Z",
+    "path": "pm/projects/vextaibot/tasks/TASK-0009-backend-web-ui-read-index-endpoint-change-status-m.md"
+  },
+  {
+    "id": "TASK-0008",
+    "title": "Web UI v1: Kanban доска по status (todo/doing/blocked/done)",
+    "status": "done",
+    "project": "vextaibot",
+    "priority": "P2",
+    "due": null,
+    "tags": [
+      "web",
+      "ui"
+    ],
+    "updated": "2026-01-31T01:18:11+01:00",
+    "path": "pm/projects/vextaibot/tasks/TASK-0008-web-ui-v1-kanban-status-todo-doing-blocked-done.md"
   }
 ]

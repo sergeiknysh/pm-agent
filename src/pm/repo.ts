@@ -23,11 +23,64 @@ export interface TaskIndexEntry {
   title: string;
   status: TaskStatus;
   project: string;
-  priority?: TaskPriority;
-  due?: string;
-  tags?: string[];
+  priority: TaskPriority | null;
+  due: string | null;
+  tags: string[];
   updated: string;
   path: string;
+}
+
+const STATUS_ORDER: TaskStatus[] = ['todo', 'doing', 'blocked', 'done'];
+function statusRank(s: TaskStatus | undefined): number {
+  const idx = STATUS_ORDER.indexOf((s ?? '') as TaskStatus);
+  return idx === -1 ? 999 : idx;
+}
+
+function priorityRank(p?: TaskPriority | null): number {
+  const m = String(p ?? '').match(/^P(\d+)$/i);
+  return m ? Number(m[1]) : 999;
+}
+
+function compareDue(a?: string | null, b?: string | null): number {
+  // nulls last; due is typically YYYY-MM-DD
+  const ad = a ?? null;
+  const bd = b ?? null;
+  if (ad === bd) return 0;
+  if (ad === null) return 1;
+  if (bd === null) return -1;
+  return ad.localeCompare(bd);
+}
+
+function compareUpdatedDesc(a?: string, b?: string): number {
+  const au = a ?? '';
+  const bu = b ?? '';
+  if (au === bu) return 0;
+  return bu.localeCompare(au);
+}
+
+function stableSortIndex(entries: TaskIndexEntry[]): TaskIndexEntry[] {
+  // Stable sorting order for UI:
+  // project asc, status (todo/doing/blocked/done), priority (P0..), due asc (null last), updated desc, id asc
+  return entries
+    .map((item, idx) => ({ item, idx }))
+    .sort((A, B) => {
+      const a = A.item;
+      const b = B.item;
+
+      if (a.project !== b.project) return String(a.project ?? '').localeCompare(String(b.project ?? ''));
+      const sr = statusRank(a.status) - statusRank(b.status);
+      if (sr !== 0) return sr;
+      const pr = priorityRank(a.priority) - priorityRank(b.priority);
+      if (pr !== 0) return pr;
+      const dr = compareDue(a.due, b.due);
+      if (dr !== 0) return dr;
+      const ur = compareUpdatedDesc(a.updated, b.updated);
+      if (ur !== 0) return ur;
+      const ir = String(a.id ?? '').localeCompare(String(b.id ?? ''));
+      if (ir !== 0) return ir;
+      return A.idx - B.idx;
+    })
+    .map(({ item }) => item);
 }
 
 export class TaskRepo {
@@ -131,26 +184,30 @@ export class TaskRepo {
 
   async buildIndex(): Promise<TaskIndexEntry[]> {
     const tasks = await this.loadAllTasks();
-    return tasks
+    const entries = tasks
       .filter((t) => !!t.path)
       .map((t) => ({
         id: t.meta.id,
         title: t.meta.title,
         status: t.meta.status,
         project: t.meta.project,
-        priority: t.meta.priority,
-        due: t.meta.due,
-        tags: t.meta.tags,
+        priority: t.meta.priority ?? null,
+        due: t.meta.due ?? null,
+        tags: t.meta.tags ?? [],
         updated: t.meta.updated,
-        path: path.relative(this.pmRoot, t.path!)
+        // Keep compatibility with pm/scripts/generate-index.mjs: path is relative to workspace root.
+        path: path.relative(path.dirname(this.pmRoot), t.path!)
       }));
+
+    return stableSortIndex(entries);
   }
 
-  async writeIndexFile(): Promise<void> {
+  async writeIndexFile(): Promise<{ entries: TaskIndexEntry[]; outPath: string }> {
     const entries = await this.buildIndex();
     const metaDir = path.join(this.pmRoot, '_meta');
     await ensureDir(metaDir);
     const outPath = path.join(metaDir, 'index.json');
     await writeText(outPath, JSON.stringify(entries, null, 2) + '\n');
+    return { entries, outPath };
   }
 }
