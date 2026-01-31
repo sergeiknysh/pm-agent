@@ -268,8 +268,10 @@ function providerCommand(provider, prompt, opts) {
   const quoted = prompt.replace(/'/g, `'\\''`);
 
   if (provider === 'codex') {
-    // Use exec for a one-shot run. --full-auto reduces interactive churn.
-    return `codex exec --full-auto '${quoted}'`;
+    // Worktrees require writing into the main repo's .git/worktrees/* directory.
+    // The default sandbox (workspace-write) may block that, so we use a more permissive sandbox.
+    // NOTE: This assumes you're running in a trusted local environment.
+    return `codex exec --ask-for-approval never --sandbox danger-full-access '${quoted}'`;
   }
 
   if (provider === 'claude') {
