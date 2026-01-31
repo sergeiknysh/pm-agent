@@ -271,7 +271,7 @@ function providerCommand(provider, prompt, opts) {
     // Worktrees require writing into the main repo's .git/worktrees/* directory.
     // The default sandbox (workspace-write) may block that, so we use a more permissive sandbox.
     // NOTE: This assumes you're running in a trusted local environment.
-    return `codex exec --ask-for-approval never --sandbox danger-full-access '${quoted}'`;
+    return `codex --ask-for-approval never --sandbox danger-full-access exec '${quoted}'`;
   }
 
   if (provider === 'claude') {
