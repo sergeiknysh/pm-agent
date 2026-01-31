@@ -1,4 +1,10 @@
 {
   "version": 1,
-  "locks": {}
+  "locks": {
+    "executor": {
+      "holder": "65143:bea0e9",
+      "acquiredAt": "2026-01-31T13:40:53.278Z",
+      "expiresAt": "2026-01-31T15:40:53.278Z"
+    }
+  }
 }

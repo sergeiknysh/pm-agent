@@ -166,7 +166,7 @@ function addMinutesIso(iso, mins) {
 }
 
 async function resolveDefaultBaseRef(preferred) {
-  if (preferred) return preferred;
+  if (preferred && preferred !== 'auto') return preferred;
   // Prefer main if it exists, else master.
   const hasMain = await runBash(`cd ${shell(WORKSPACE)} && git rev-parse --verify main >/dev/null 2>&1`, { cwd: WORKSPACE });
   if (hasMain.code === 0) return 'main';
