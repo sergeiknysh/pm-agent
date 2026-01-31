@@ -8,12 +8,14 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import type { TaskIndexItem, TaskStatus } from '../api/types'
-import { fetchIndex, setTaskStatus } from '../api/client'
+import type { TaskIndexItem, TaskStatus, TaskDetails } from '../api/types'
+import { createTask, fetchIndex, setTaskStatus, fetchTask, appendTaskLog, patchTask, type CreateTaskInput, type TaskPatch } from '../api/client'
+import { createProject, deleteProject, fetchProjects } from '../api/projects'
 import { useAuth } from '../auth/AuthContext'
 import { navigate } from './router'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
+import { TaskDetailsPanel } from './TaskDetailsPanel'
 
 const STATUSES: { key: TaskStatus; label: string }[] = [
   { key: 'todo', label: 'To Do' },
@@ -34,8 +36,24 @@ export function App() {
   const [loading, setLoading] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
 
+  const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
+  const [details, setDetails] = useState<TaskDetails | null>(null)
+  const [detailsLoading, setDetailsLoading] = useState(false)
+  const [detailsError, setDetailsError] = useState<string | null>(null)
+  const [newLogEntry, setNewLogEntry] = useState('')
+  const [postingLog, setPostingLog] = useState(false)
+
   const [project, setProject] = useState<string>('all')
   const [query, setQuery] = useState('')
+
+  const [projectList, setProjectList] = useState<string[] | null>(null)
+  const [projectsOpen, setProjectsOpen] = useState(false)
+  const [newProjectName, setNewProjectName] = useState('')
+  const isAdmin = authState.status === 'authed' && authState.user.roles.includes('admin')
+
+  const [newTaskOpen, setNewTaskOpen] = useState(false)
+  const [newTask, setNewTask] = useState<CreateTaskInput>({ project: '', title: '' })
+  const [newTaskSubmitting, setNewTaskSubmitting] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -48,11 +66,13 @@ export function App() {
     setError(null)
     try {
       const ctrl = new AbortController()
-      const data = await fetchIndex(ctrl.signal)
+      const [data, projects] = await Promise.all([fetchIndex(ctrl.signal), fetchProjects(ctrl.signal)])
       setItems(data)
+      setProjectList(projects)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       setItems(null)
+      setProjectList(null)
     } finally {
       setLoading(false)
     }
@@ -63,10 +83,28 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (!detailsOpenId) return
+    const ctrl = new AbortController()
+    setDetailsLoading(true)
+    setDetailsError(null)
+    setDetails(null)
+    setNewLogEntry('')
+
+    fetchTask(detailsOpenId, ctrl.signal)
+      .then((t) => setDetails(t))
+      .catch((e) => setDetailsError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setDetailsLoading(false))
+
+    return () => ctrl.abort()
+  }, [detailsOpenId])
+
   const projects = useMemo(() => {
-    const set = new Set((items ?? []).map((t) => t.project).filter(Boolean))
+    const fromTasks = new Set((items ?? []).map((t) => t.project).filter(Boolean))
+    const fromApi = new Set((projectList ?? []).filter(Boolean))
+    const set = new Set<string>([...Array.from(fromTasks), ...Array.from(fromApi)])
     return ['all', ...Array.from(set).sort()]
-  }, [items])
+  }, [items, projectList])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -134,6 +172,78 @@ export function App() {
     [activeId, items],
   )
 
+  const detailsTask = useMemo(
+    () => (detailsOpenId && items ? items.find((t) => t.id === detailsOpenId) ?? null : null),
+    [detailsOpenId, items],
+  )
+
+  async function patchTaskOptimistic(id: string, patch: TaskPatch) {
+    const prevItems = items
+    const prevDetails = details
+
+    const nowIso = new Date().toISOString()
+
+    // optimistic update for index
+    setItems((prev) =>
+      (prev ?? []).map((t) => {
+        if (t.id !== id) return t
+        return {
+          ...t,
+          ...(patch.title !== undefined ? { title: patch.title } : null),
+          ...(patch.status !== undefined ? { status: patch.status } : null),
+          ...(patch.priority !== undefined ? { priority: patch.priority } : null),
+          ...(patch.due !== undefined ? { due: patch.due } : null),
+          ...(patch.tags !== undefined ? { tags: patch.tags } : null),
+          updated: nowIso,
+        }
+      }),
+    )
+
+    // optimistic update for opened task details
+    if (detailsOpenId === id && prevDetails) {
+      setDetails({
+        ...prevDetails,
+        meta: {
+          ...prevDetails.meta,
+          ...(patch.title !== undefined ? { title: patch.title } : null),
+          ...(patch.status !== undefined ? { status: patch.status } : null),
+          ...(patch.priority !== undefined
+            ? patch.priority
+              ? { priority: patch.priority }
+              : { priority: undefined }
+            : null),
+          ...(patch.due !== undefined
+            ? patch.due
+              ? { due: patch.due }
+              : { due: undefined }
+            : null),
+          ...(patch.tags !== undefined
+            ? patch.tags.length
+              ? { tags: patch.tags }
+              : { tags: undefined }
+            : null),
+          updated: nowIso,
+        },
+      })
+    }
+
+    try {
+      await patchTask(id, patch)
+      // best-effort refresh to sync timestamps/order/path formatting
+      void reload()
+      if (detailsOpenId === id) {
+        // refresh the opened details too (body/log)
+        const next = await fetchTask(id)
+        setDetails(next)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setItems(prevItems)
+      setDetails(prevDetails)
+      throw err
+    }
+  }
+
   async function onLogout() {
     try {
       await logout()
@@ -157,6 +267,25 @@ export function App() {
               ))}
             </select>
           </label>
+
+          <button
+            className="btn"
+            onClick={() => {
+              const defaultProject =
+                project !== 'all' ? project : (projectList ?? projects.filter((p) => p !== 'all'))[0] ?? ''
+              setNewTask({ project: defaultProject, title: '', priority: '', due: '', tags: [], estimate: '', body: '' })
+              setNewTaskOpen(true)
+            }}
+            disabled={loading}
+          >
+            New Task
+          </button>
+
+          {isAdmin ? (
+            <button className="btn" onClick={() => setProjectsOpen(true)} disabled={loading}>
+              Manage…
+            </button>
+          ) : null}
 
           <label className="control grow">
             <span>Search</span>
@@ -188,6 +317,419 @@ export function App() {
         </div>
       ) : null}
 
+      {newTaskOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => (newTaskSubmitting ? null : setNewTaskOpen(false))}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 60,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(820px, 100%)',
+              background: 'rgba(20, 24, 38, 0.98)',
+              border: '1px solid rgba(231, 236, 255, 0.12)',
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>New Task</div>
+              <button className="btn" onClick={() => setNewTaskOpen(false)} disabled={newTaskSubmitting}>
+                Close
+              </button>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <label className="control">
+                <span>Project</span>
+                <select
+                  value={newTask.project}
+                  onChange={(e) => setNewTask((p) => ({ ...p, project: e.target.value }))}
+                >
+                  <option value="" disabled>
+                    Select…
+                  </option>
+                  {(projectList ?? projects.filter((p) => p !== 'all'))
+                    .filter((p) => p !== 'all')
+                    .map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                </select>
+              </label>
+
+              <label className="control">
+                <span>Priority</span>
+                <select
+                  value={newTask.priority ?? ''}
+                  onChange={(e) => setNewTask((p) => ({ ...p, priority: e.target.value }))}
+                >
+                  <option value="">—</option>
+                  <option value="P0">P0</option>
+                  <option value="P1">P1</option>
+                  <option value="P2">P2</option>
+                  <option value="P3">P3</option>
+                </select>
+              </label>
+
+              <label className="control" style={{ gridColumn: '1 / -1' }}>
+                <span>Title</span>
+                <input
+                  value={newTask.title}
+                  onChange={(e) => setNewTask((p) => ({ ...p, title: e.target.value }))}
+                  placeholder="What needs to be done?"
+                  autoFocus
+                />
+              </label>
+
+              <label className="control">
+                <span>Due</span>
+                <input
+                  type="date"
+                  value={newTask.due ?? ''}
+                  onChange={(e) => setNewTask((p) => ({ ...p, due: e.target.value }))}
+                />
+              </label>
+
+              <label className="control">
+                <span>Estimate</span>
+                <input
+                  value={newTask.estimate ?? ''}
+                  onChange={(e) => setNewTask((p) => ({ ...p, estimate: e.target.value }))}
+                  placeholder="e.g. 2h, 1d"
+                />
+              </label>
+
+              <label className="control" style={{ gridColumn: '1 / -1' }}>
+                <span>Tags (comma-separated)</span>
+                <input
+                  value={(newTask.tags ?? []).join(', ')}
+                  onChange={(e) =>
+                    setNewTask((p) => ({
+                      ...p,
+                      tags: e.target.value
+                        .split(',')
+                        .map((x) => x.trim())
+                        .filter(Boolean),
+                    }))
+                  }
+                  placeholder="backend, ui, urgent"
+                />
+              </label>
+
+              <label className="control" style={{ gridColumn: '1 / -1' }}>
+                <span>Body (optional, markdown)</span>
+                <textarea
+                  value={newTask.body ?? ''}
+                  onChange={(e) => setNewTask((p) => ({ ...p, body: e.target.value }))}
+                  placeholder="## Context\n\n..."
+                  rows={8}
+                />
+              </label>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                className="btn"
+                disabled={newTaskSubmitting}
+                onClick={async () => {
+                  try {
+                    const project = (newTask.project ?? '').trim()
+                    const title = (newTask.title ?? '').trim()
+                    if (!project || !title) return
+
+                    setNewTaskSubmitting(true)
+                    await createTask({
+                      project,
+                      title,
+                      priority: newTask.priority?.trim() || undefined,
+                      due: newTask.due?.trim() || undefined,
+                      tags: newTask.tags?.length ? newTask.tags : undefined,
+                      estimate: newTask.estimate?.trim() || undefined,
+                      body: newTask.body?.trim() || undefined,
+                    })
+
+                    setNewTaskOpen(false)
+                    void reload()
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : String(err))
+                  } finally {
+                    setNewTaskSubmitting(false)
+                  }
+                }}
+              >
+                {newTaskSubmitting ? 'Creating…' : 'Create Task'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {projectsOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setProjectsOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 50,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(720px, 100%)',
+              background: 'rgba(20, 24, 38, 0.98)',
+              border: '1px solid rgba(231, 236, 255, 0.12)',
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Projects</div>
+              <button className="btn" onClick={() => setProjectsOpen(false)}>
+                Close
+              </button>
+            </div>
+
+            <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+              <input
+                value={newProjectName}
+                onChange={(e) => setNewProjectName(e.target.value)}
+                placeholder="new-project"
+                style={{ flex: 1 }}
+              />
+              <button
+                className="btn"
+                onClick={async () => {
+                  try {
+                    const name = newProjectName.trim()
+                    if (!name) return
+                    await createProject(name)
+                    setNewProjectName('')
+                    const next = await fetchProjects()
+                    setProjectList(next)
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : String(err))
+                  }
+                }}
+              >
+                Create
+              </button>
+            </div>
+
+            <div style={{ marginTop: 12, maxHeight: '60vh', overflow: 'auto' }}>
+              {(projectList ?? projects.filter((p) => p !== 'all')).length === 0 ? (
+                <div style={{ color: 'rgba(231, 236, 255, 0.75)', fontSize: 13 }}>No projects</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {(projectList ?? projects.filter((p) => p !== 'all'))
+                    .filter((p) => p !== 'all')
+                    .map((p) => (
+                      <div
+                        key={p}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '8px 10px',
+                          border: '1px solid rgba(231, 236, 255, 0.10)',
+                          borderRadius: 10,
+                        }}
+                      >
+                        <div style={{ fontSize: 13 }}>{p}</div>
+                        <button
+                          className="btn"
+                          onClick={async () => {
+                            try {
+                              await deleteProject(p)
+                              const next = await fetchProjects()
+                              setProjectList(next)
+                              if (project === p) setProject('all')
+                              void reload()
+                            } catch (err) {
+                              setError(err instanceof Error ? err.message : String(err))
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: 10, color: 'rgba(231, 236, 255, 0.6)', fontSize: 12 }}>
+              Delete is blocked if a project has tasks.
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {detailsOpenId ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setDetailsOpenId(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 60,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(900px, 100%)',
+              background: 'rgba(20, 24, 38, 0.98)',
+              border: '1px solid rgba(231, 236, 255, 0.12)',
+              borderRadius: 12,
+              padding: 16,
+              maxHeight: '85vh',
+              overflow: 'auto',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 14, fontWeight: 700 }}>Task</div>
+              <button className="btn" onClick={() => setDetailsOpenId(null)}>
+                Close
+              </button>
+            </div>
+
+            {detailsLoading ? (
+              <div style={{ marginTop: 12, color: 'rgba(231, 236, 255, 0.75)', fontSize: 13 }}>
+                Loading…
+              </div>
+            ) : detailsError ? (
+              <div className="error" style={{ marginTop: 12 }}>
+                <div className="error-title">Error</div>
+                <pre className="error-body">{detailsError}</pre>
+              </div>
+            ) : details ? (
+              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <div style={{ fontSize: 16, fontWeight: 700 }}>{details.meta.title}</div>
+                  <div className="task-meta" style={{ marginTop: 6 }}>
+                    <span className="pill">{details.meta.id}</span>
+                    <span className="pill">{details.meta.project}</span>
+                    <span className="pill">{statusLabel(details.meta.status)}</span>
+                    {details.meta.priority ? <span className="pill">{details.meta.priority}</span> : null}
+                    {details.meta.due ? <span className="pill">Due {details.meta.due}</span> : null}
+                  </div>
+                  <div style={{ marginTop: 6, color: 'rgba(231, 236, 255, 0.6)', fontSize: 12 }}>
+                    Updated {details.meta.updated}
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Log</div>
+                  {details.log.length === 0 ? (
+                    <div style={{ color: 'rgba(231, 236, 255, 0.75)', fontSize: 13 }}>
+                      No log entries yet.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {details.log.map((line, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            fontSize: 13,
+                            padding: '6px 8px',
+                            border: '1px solid rgba(231, 236, 255, 0.10)',
+                            borderRadius: 10,
+                            background: 'rgba(0,0,0,0.15)',
+                          }}
+                        >
+                          {line}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <form
+                    style={{ marginTop: 10, display: 'flex', gap: 8 }}
+                    onSubmit={async (e) => {
+                      e.preventDefault()
+                      if (!detailsOpenId) return
+                      const entry = newLogEntry.trim()
+                      if (!entry) return
+                      setPostingLog(true)
+                      setDetailsError(null)
+                      try {
+                        const next = await appendTaskLog(detailsOpenId, entry)
+                        setDetails(next)
+                        setNewLogEntry('')
+                        // refresh index so updated timestamps/order sync
+                        void reload()
+                      } catch (err) {
+                        setDetailsError(err instanceof Error ? err.message : String(err))
+                      } finally {
+                        setPostingLog(false)
+                      }
+                    }}
+                  >
+                    <input
+                      value={newLogEntry}
+                      onChange={(e) => setNewLogEntry(e.target.value)}
+                      placeholder="Add a log entry…"
+                      style={{ flex: 1 }}
+                      disabled={postingLog}
+                    />
+                    <button className="btn" type="submit" disabled={postingLog}>
+                      {postingLog ? 'Adding…' : 'Add'}
+                    </button>
+                  </form>
+                </div>
+
+                {details.body.trim() ? (
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Body</div>
+                    <pre
+                      style={{
+                        margin: 0,
+                        whiteSpace: 'pre-wrap',
+                        fontSize: 12,
+                        color: 'rgba(231, 236, 255, 0.85)',
+                        background: 'rgba(0,0,0,0.18)',
+                        border: '1px solid rgba(231, 236, 255, 0.10)',
+                        borderRadius: 12,
+                        padding: 10,
+                      }}
+                    >
+                      {details.body.trim()}
+                    </pre>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <main className="board">
           {STATUSES.map((s) => (
@@ -198,7 +740,13 @@ export function App() {
               count={byStatus[s.key].length}
             >
               {byStatus[s.key].map((t) => (
-                <TaskCard key={t.id} task={t} />
+                <TaskCard
+                  key={t.id}
+                  task={t}
+                  onOpen={(id) => {
+                    setDetailsOpenId(id)
+                  }}
+                />
               ))}
             </KanbanColumn>
           ))}

@@ -3,7 +3,7 @@ import { CSS } from '@dnd-kit/utilities'
 import type { CSSProperties } from 'react'
 import type { TaskIndexItem } from '../api/types'
 
-export function TaskCard(props: { task: TaskIndexItem }) {
+export function TaskCard(props: { task: TaskIndexItem; onOpen?: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: props.task.id,
   })
@@ -18,6 +18,10 @@ export function TaskCard(props: { task: TaskIndexItem }) {
       ref={setNodeRef}
       style={style}
       className={`card ${isDragging ? 'card--dragging' : ''}`}
+      onClick={() => {
+        if (isDragging) return
+        props.onOpen?.(props.task.id)
+      }}
       {...listeners}
       {...attributes}
     >

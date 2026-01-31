@@ -1,1 +1,1 @@
-{"root":["./src/main.tsx","./src/api/client.ts","./src/api/types.ts","./src/ui/App.tsx","./src/ui/KanbanColumn.tsx","./src/ui/TaskCard.tsx"],"version":"5.9.3"}
+{"root":["./src/main.tsx","./src/api/apiFetch.ts","./src/api/auth.ts","./src/api/client.ts","./src/api/projects.ts","./src/api/types.ts","./src/auth/AuthContext.tsx","./src/ui/App.tsx","./src/ui/KanbanColumn.tsx","./src/ui/Login.tsx","./src/ui/Root.tsx","./src/ui/TaskCard.tsx","./src/ui/TaskDetailsModal.tsx","./src/ui/TaskDetailsPanel.tsx","./src/ui/router.ts"],"version":"5.9.3"}

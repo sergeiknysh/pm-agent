@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { walkFiles, readText, writeText, ensureDir, fileExists } from './fs.js';
 import { parseTaskMarkdown, serializeTaskFile, applyTaskPatch, appendTaskLog, nowIso } from './task.js';
 import type { ParsedTaskFile, TaskFrontmatterV1, TaskPriority, TaskStatus } from './types.js';
@@ -87,6 +88,46 @@ export class TaskRepo {
   readonly pmRoot: string;
   constructor(opts: TaskRepoOptions) {
     this.pmRoot = opts.pmRoot;
+  }
+
+  projectsRoot(): string {
+    return path.join(this.pmRoot, 'projects');
+  }
+
+  async listProjects(): Promise<string[]> {
+    const root = this.projectsRoot();
+    if (!(await fileExists(root))) return [];
+
+    const entries = await fs.readdir(root, { withFileTypes: true });
+    return entries
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .filter((name) => name && !name.startsWith('.'))
+      .sort((a, b) => a.localeCompare(b));
+  }
+
+  async countTasksInProject(project: string): Promise<number> {
+    const dir = this.tasksDirForProject(project);
+    if (!(await fileExists(dir))) return 0;
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    return entries.filter((e) => e.isFile() && e.name.endsWith('.md')).length;
+  }
+
+  async createProject(project: string): Promise<void> {
+    // Only creates directories; tasks are stored under projects/<project>/tasks.
+    const tasksDir = this.tasksDirForProject(project);
+    await ensureDir(tasksDir);
+  }
+
+  async deleteProject(project: string): Promise<void> {
+    const n = await this.countTasksInProject(project);
+    if (n > 0) {
+      throw new Error(`Cannot delete project '${project}': it has ${n} task(s)`);
+    }
+
+    const projectDir = path.join(this.projectsRoot(), project);
+    if (!(await fileExists(projectDir))) return;
+    await fs.rm(projectDir, { recursive: true, force: true });
   }
 
   tasksDirForProject(project: string): string {
