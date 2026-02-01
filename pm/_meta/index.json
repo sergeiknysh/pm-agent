@@ -2,7 +2,7 @@
   {
     "id": "TASK-0002",
     "title": "Core library: Task Spec v1 parser + CRUD",
-    "status": "done",
+    "status": "doing",
     "project": "pm-as-files",
     "priority": "P1",
     "due": null,
@@ -11,7 +11,7 @@
       "files",
       "typescript"
     ],
-    "updated": "2026-01-31T01:13:30+01:00",
+    "updated": "2026-02-01T15:48:38.965Z",
     "path": "pm/projects/pm-as-files/tasks/TASK-0002-core-library.md"
   },
   {
@@ -38,8 +38,36 @@
     "tags": [
       "dev"
     ],
-    "updated": "2026-02-01T15:42:29.309Z",
+    "updated": "2026-02-01T15:48:15.037Z",
     "path": "pm/projects/vextaibot/tasks/TASK-0010-vextaibot-test-triage-p2-dev-due-2026-02-01.md"
+  },
+  {
+    "id": "TASK-0006",
+    "title": "Telegram команды: /add /today /inbox /done (через Vexta) — дизайн и реализация",
+    "status": "doing",
+    "project": "vextaibot",
+    "priority": "P1",
+    "due": null,
+    "tags": [
+      "telegram",
+      "pm"
+    ],
+    "updated": "2026-02-01T15:48:37.339Z",
+    "path": "pm/projects/vextaibot/tasks/TASK-0006-telegram-add-today-inbox-done-vexta.md"
+  },
+  {
+    "id": "TASK-0008",
+    "title": "Web UI v1: Kanban доска по status (todo/doing/blocked/done)",
+    "status": "doing",
+    "project": "vextaibot",
+    "priority": "P2",
+    "due": null,
+    "tags": [
+      "web",
+      "ui"
+    ],
+    "updated": "2026-02-01T15:48:33.574Z",
+    "path": "pm/projects/vextaibot/tasks/TASK-0008-web-ui-v1-kanban-status-todo-doing-blocked-done.md"
   },
   {
     "id": "TASK-0003",
@@ -94,20 +122,6 @@
     "path": "pm/projects/vextaibot/tasks/TASK-0005-pm-meta-index-json.md"
   },
   {
-    "id": "TASK-0006",
-    "title": "Telegram команды: /add /today /inbox /done (через Vexta) — дизайн и реализация",
-    "status": "done",
-    "project": "vextaibot",
-    "priority": "P1",
-    "due": null,
-    "tags": [
-      "telegram",
-      "pm"
-    ],
-    "updated": "2026-01-31T01:17:43+01:00",
-    "path": "pm/projects/vextaibot/tasks/TASK-0006-telegram-add-today-inbox-done-vexta.md"
-  },
-  {
     "id": "TASK-0007",
     "title": "Telegram inline buttons: ToDo/Doing/Done/Snooze 1d",
     "status": "done",
@@ -147,19 +161,5 @@
     ],
     "updated": "2026-01-31T00:19:00.456Z",
     "path": "pm/projects/vextaibot/tasks/TASK-0009-backend-web-ui-read-index-endpoint-change-status-m.md"
-  },
-  {
-    "id": "TASK-0008",
-    "title": "Web UI v1: Kanban доска по status (todo/doing/blocked/done)",
-    "status": "done",
-    "project": "vextaibot",
-    "priority": "P2",
-    "due": null,
-    "tags": [
-      "web",
-      "ui"
-    ],
-    "updated": "2026-01-31T01:18:11+01:00",
-    "path": "pm/projects/vextaibot/tasks/TASK-0008-web-ui-v1-kanban-status-todo-doing-blocked-done.md"
   }
 ]

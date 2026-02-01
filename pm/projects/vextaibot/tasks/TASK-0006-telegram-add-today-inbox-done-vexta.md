@@ -1,12 +1,14 @@
 ---
 id: TASK-0006
-title: "Telegram команды: /add /today /inbox /done (через Vexta) — дизайн и реализация"
-status: done
+title: 'Telegram команды: /add /today /inbox /done (через Vexta) — дизайн и реализация'
+status: doing
 project: vextaibot
+created: '2026-01-30T23:32:54.278Z'
+updated: '2026-02-01T15:48:37.339Z'
 priority: P1
-tags: [telegram, pm]
-created: 2026-01-30T23:32:54.278Z
-updated: 2026-01-31T01:17:43+01:00
+tags:
+  - telegram
+  - pm
 estimate: 6h
 ---
 

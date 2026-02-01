@@ -1,12 +1,15 @@
 ---
 id: TASK-0002
-title: "Core library: Task Spec v1 parser + CRUD"
-status: done
+title: 'Core library: Task Spec v1 parser + CRUD'
+status: doing
 project: pm-as-files
-created: 2026-01-31T00:32:00+01:00
-updated: 2026-01-31T01:13:30+01:00
+created: '2026-01-31T00:32:00+01:00'
+updated: '2026-02-01T15:48:38.965Z'
 priority: P1
-tags: [pm, files, typescript]
+tags:
+  - pm
+  - files
+  - typescript
 ---
 
 ## Context

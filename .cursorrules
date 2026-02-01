@@ -1,0 +1,19 @@
+# Documentation Rules
+
+You are working on the PM-as-Files project.
+Documentation is located in `pm/docs/`.
+
+## Structure
+- Always update `pm/docs/README.md` when adding new doc files.
+- Keep the table of contents in `pm/docs/README.md` up to date.
+- Use relative links: `[Concept](./concept.md)`.
+
+## Content Style
+- Use concise Markdown.
+- Headers: H1 for title, H2 for major sections.
+- Code blocks: always specify language (ts, bash, json).
+
+## Project Context
+- **Root**: `pm-as-files` (application code: src/, web/, scripts/).
+- **Data**: `pm/` (user content: tasks, projects, inbox.md).
+- **Docs**: `pm/docs/` (architecture & specs).

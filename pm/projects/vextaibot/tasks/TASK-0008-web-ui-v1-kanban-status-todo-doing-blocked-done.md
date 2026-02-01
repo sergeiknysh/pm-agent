@@ -1,12 +1,14 @@
 ---
 id: TASK-0008
-title: "Web UI v1: Kanban доска по status (todo/doing/blocked/done)"
-status: done
+title: 'Web UI v1: Kanban доска по status (todo/doing/blocked/done)'
+status: doing
 project: vextaibot
+created: '2026-01-30T23:32:54.278Z'
+updated: '2026-02-01T15:48:33.574Z'
 priority: P2
-tags: [web, ui]
-created: 2026-01-30T23:32:54.278Z
-updated: 2026-01-31T01:18:11+01:00
+tags:
+  - web
+  - ui
 estimate: 8h
 ---
 
