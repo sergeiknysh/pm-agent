@@ -3,9 +3,10 @@ import { CSS } from '@dnd-kit/utilities'
 import type { CSSProperties } from 'react'
 import type { TaskIndexItem } from '../api/types'
 
-export function TaskCard(props: { task: TaskIndexItem; onOpen?: (id: string) => void }) {
+export function TaskCard(props: { task: TaskIndexItem; onOpen?: (id: string) => void; nodeId?: string }) {
+  const draggableId = props.nodeId ?? props.task.id
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: props.task.id,
+    id: draggableId,
   })
 
   const style: CSSProperties = {

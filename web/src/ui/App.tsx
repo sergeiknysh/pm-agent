@@ -28,13 +28,24 @@ function statusLabel(s: TaskStatus): string {
   return STATUSES.find((x) => x.key === s)?.label ?? s
 }
 
+function buildNodeId(task: TaskIndexItem): string {
+  return `${task.project}::${task.id}`
+}
+
+function parseNodeId(nodeId: string): { project: string; id: string } {
+  const parts = nodeId.split('::')
+  const id = parts.slice(-1)[0] ?? nodeId
+  const project = parts.slice(0, -1).join('::')
+  return { project, id }
+}
+
 export function App() {
   const { state: authState, logout } = useAuth()
 
   const [items, setItems] = useState<TaskIndexItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
 
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
   const [details, setDetails] = useState<TaskDetails | null>(null)
@@ -131,12 +142,12 @@ export function App() {
   }, [filtered])
 
   function onDragStart(e: DragStartEvent) {
-    setActiveId(String(e.active.id))
+    setActiveNodeId(String(e.active.id))
   }
 
   async function onDragEnd(e: DragEndEvent) {
-    setActiveId(null)
-    const id = String(e.active.id)
+    setActiveNodeId(null)
+    const activeId = String(e.active.id)
     const overId = e.over?.id ? String(e.over.id) : null
 
     if (!overId) return
@@ -144,14 +155,17 @@ export function App() {
     const newStatus = overId as TaskStatus
     if (!['todo', 'doing', 'blocked', 'done'].includes(newStatus)) return
 
-    const current = (items ?? []).find((t) => t.id === id)
+    const { project: activeProject, id } = parseNodeId(activeId)
+    const current = (items ?? []).find((t) => t.id === id && t.project === activeProject)
     if (!current) return
     const oldStatus = current.status
     if (oldStatus === newStatus) return
 
     // optimistic update
     setItems((prev) =>
-      (prev ?? []).map((t) => (t.id === id ? { ...t, status: newStatus } : t)),
+      (prev ?? []).map((t) =>
+        t.id === id && t.project === activeProject ? { ...t, status: newStatus } : t,
+      ),
     )
 
     try {
@@ -167,15 +181,11 @@ export function App() {
     }
   }
 
-  const activeTask = useMemo(
-    () => (activeId && items ? items.find((t) => t.id === activeId) ?? null : null),
-    [activeId, items],
-  )
-
-  const detailsTask = useMemo(
-    () => (detailsOpenId && items ? items.find((t) => t.id === detailsOpenId) ?? null : null),
-    [detailsOpenId, items],
-  )
+  const activeTask = useMemo(() => {
+    if (!activeNodeId || !items) return null
+    const { project, id } = parseNodeId(activeNodeId)
+    return items.find((t) => t.id === id && t.project === project) ?? null
+  }, [activeNodeId, items])
 
   async function patchTaskOptimistic(id: string, patch: TaskPatch) {
     const prevItems = items
@@ -647,28 +657,34 @@ export function App() {
 
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Log</div>
-                  {details.log.length === 0 ? (
-                    <div style={{ color: 'rgba(231, 236, 255, 0.75)', fontSize: 13 }}>
-                      No log entries yet.
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {details.log.map((line, idx) => (
-                        <div
-                          key={idx}
-                          style={{
-                            fontSize: 13,
-                            padding: '6px 8px',
-                            border: '1px solid rgba(231, 236, 255, 0.10)',
-                            borderRadius: 10,
-                            background: 'rgba(0,0,0,0.15)',
-                          }}
-                        >
-                          {line}
+                  {(() => {
+                    const logEntries = details.log ?? []
+                    if (logEntries.length === 0) {
+                      return (
+                        <div style={{ color: 'rgba(231, 236, 255, 0.75)', fontSize: 13 }}>
+                          No log entries yet.
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      )
+                    }
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {logEntries.map((line, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              fontSize: 13,
+                              padding: '6px 8px',
+                              border: '1px solid rgba(231, 236, 255, 0.10)',
+                              borderRadius: 10,
+                              background: 'rgba(0,0,0,0.15)',
+                            }}
+                          >
+                            {line}
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })()}
 
                   <form
                     style={{ marginTop: 10, display: 'flex', gap: 8 }}
@@ -739,15 +755,19 @@ export function App() {
               title={s.label}
               count={byStatus[s.key].length}
             >
-              {byStatus[s.key].map((t) => (
-                <TaskCard
-                  key={t.id}
-                  task={t}
-                  onOpen={(id) => {
-                    setDetailsOpenId(id)
-                  }}
-                />
-              ))}
+              {byStatus[s.key].map((t) => {
+                const nodeId = buildNodeId(t)
+                return (
+                  <TaskCard
+                    key={nodeId}
+                    nodeId={nodeId}
+                    task={t}
+                    onOpen={(id) => {
+                      setDetailsOpenId(id)
+                    }}
+                  />
+                )
+              })}
             </KanbanColumn>
           ))}
         </main>
