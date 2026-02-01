@@ -8,14 +8,14 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import type { TaskIndexItem, TaskStatus, TaskDetails } from '../api/types'
-import { createTask, fetchIndex, setTaskStatus, fetchTask, appendTaskLog, patchTask, type CreateTaskInput, type TaskPatch } from '../api/client'
+import type { TaskDetails, TaskIndexItem, TaskStatus } from '../api/types'
+import { createTask, fetchIndex, setTaskStatus, patchTask, fetchTask, appendTaskLog, type CreateTaskInput, type TaskPatch } from '../api/client'
 import { createProject, deleteProject, fetchProjects } from '../api/projects'
 import { useAuth } from '../auth/AuthContext'
 import { navigate } from './router'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
-import { TaskDetailsPanel } from './TaskDetailsPanel'
+import { TaskDetailsModal } from './TaskDetailsModal'
 
 const STATUSES: { key: TaskStatus; label: string }[] = [
   { key: 'todo', label: 'To Do' },
@@ -47,12 +47,11 @@ export function App() {
   const [loading, setLoading] = useState(false)
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null)
 
-  const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
-  const [details, setDetails] = useState<TaskDetails | null>(null)
+  // Task details modal state
+  const [selectedTask, setSelectedTask] = useState<TaskIndexItem | null>(null)
+  const [taskDetails, setTaskDetails] = useState<TaskDetails | null>(null)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [detailsError, setDetailsError] = useState<string | null>(null)
-  const [newLogEntry, setNewLogEntry] = useState('')
-  const [postingLog, setPostingLog] = useState(false)
 
   const [project, setProject] = useState<string>('all')
   const [query, setQuery] = useState('')
@@ -94,21 +93,43 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Fetch full task details when a task is selected
   useEffect(() => {
-    if (!detailsOpenId) return
+    if (!selectedTask) {
+      setTaskDetails(null)
+      setDetailsError(null)
+      return
+    }
+
+    let cancelled = false
     const ctrl = new AbortController()
-    setDetailsLoading(true)
-    setDetailsError(null)
-    setDetails(null)
-    setNewLogEntry('')
 
-    fetchTask(detailsOpenId, ctrl.signal)
-      .then((t) => setDetails(t))
-      .catch((e) => setDetailsError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setDetailsLoading(false))
+    async function loadDetails() {
+      setDetailsLoading(true)
+      setDetailsError(null)
+      try {
+        const details = await fetchTask(selectedTask!.id, ctrl.signal)
+        if (!cancelled) {
+          setTaskDetails(details)
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setDetailsError(e instanceof Error ? e.message : String(e))
+        }
+      } finally {
+        if (!cancelled) {
+          setDetailsLoading(false)
+        }
+      }
+    }
 
-    return () => ctrl.abort()
-  }, [detailsOpenId])
+    void loadDetails()
+
+    return () => {
+      cancelled = true
+      ctrl.abort()
+    }
+  }, [selectedTask])
 
   const projects = useMemo(() => {
     const fromTasks = new Set((items ?? []).map((t) => t.project).filter(Boolean))
@@ -187,13 +208,10 @@ export function App() {
     return items.find((t) => t.id === id && t.project === project) ?? null
   }, [activeNodeId, items])
 
+  // Optimistic update for index; modal refetches details after save.
   async function patchTaskOptimistic(id: string, patch: TaskPatch) {
     const prevItems = items
-    const prevDetails = details
-
     const nowIso = new Date().toISOString()
-
-    // optimistic update for index
     setItems((prev) =>
       (prev ?? []).map((t) => {
         if (t.id !== id) return t
@@ -208,50 +226,37 @@ export function App() {
         }
       }),
     )
-
-    // optimistic update for opened task details
-    if (detailsOpenId === id && prevDetails) {
-      setDetails({
-        ...prevDetails,
-        meta: {
-          ...prevDetails.meta,
-          ...(patch.title !== undefined ? { title: patch.title } : null),
-          ...(patch.status !== undefined ? { status: patch.status } : null),
-          ...(patch.priority !== undefined
-            ? patch.priority
-              ? { priority: patch.priority }
-              : { priority: undefined }
-            : null),
-          ...(patch.due !== undefined
-            ? patch.due
-              ? { due: patch.due }
-              : { due: undefined }
-            : null),
-          ...(patch.tags !== undefined
-            ? patch.tags.length
-              ? { tags: patch.tags }
-              : { tags: undefined }
-            : null),
-          updated: nowIso,
-        },
-      })
+    // Also update selectedTask if it's the same task
+    if (selectedTask && selectedTask.id === id) {
+      setSelectedTask((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...(patch.title !== undefined ? { title: patch.title } : null),
+              ...(patch.status !== undefined ? { status: patch.status } : null),
+              ...(patch.priority !== undefined ? { priority: patch.priority } : null),
+              ...(patch.due !== undefined ? { due: patch.due } : null),
+              ...(patch.tags !== undefined ? { tags: patch.tags } : null),
+              updated: nowIso,
+            }
+          : null,
+      )
     }
-
     try {
       await patchTask(id, patch)
-      // best-effort refresh to sync timestamps/order/path formatting
       void reload()
-      if (detailsOpenId === id) {
-        // refresh the opened details too (body/log)
-        const next = await fetchTask(id)
-        setDetails(next)
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       setItems(prevItems)
-      setDetails(prevDetails)
       throw err
     }
+  }
+
+  // Append log entry and refresh details
+  async function handleAppendLog(id: string, entry: string) {
+    const updated = await appendTaskLog(id, entry)
+    setTaskDetails(updated)
+    void reload()
   }
 
   async function onLogout() {
@@ -595,155 +600,16 @@ export function App() {
         </div>
       ) : null}
 
-      {detailsOpenId ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setDetailsOpenId(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.55)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 16,
-            zIndex: 60,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: 'min(900px, 100%)',
-              background: 'rgba(20, 24, 38, 0.98)',
-              border: '1px solid rgba(231, 236, 255, 0.12)',
-              borderRadius: 12,
-              padding: 16,
-              maxHeight: '85vh',
-              overflow: 'auto',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 14, fontWeight: 700 }}>Task</div>
-              <button className="btn" onClick={() => setDetailsOpenId(null)}>
-                Close
-              </button>
-            </div>
-
-            {detailsLoading ? (
-              <div style={{ marginTop: 12, color: 'rgba(231, 236, 255, 0.75)', fontSize: 13 }}>
-                Loading…
-              </div>
-            ) : detailsError ? (
-              <div className="error" style={{ marginTop: 12 }}>
-                <div className="error-title">Error</div>
-                <pre className="error-body">{detailsError}</pre>
-              </div>
-            ) : details ? (
-              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 700 }}>{details.meta.title}</div>
-                  <div className="task-meta" style={{ marginTop: 6 }}>
-                    <span className="pill">{details.meta.id}</span>
-                    <span className="pill">{details.meta.project}</span>
-                    <span className="pill">{statusLabel(details.meta.status)}</span>
-                    {details.meta.priority ? <span className="pill">{details.meta.priority}</span> : null}
-                    {details.meta.due ? <span className="pill">Due {details.meta.due}</span> : null}
-                  </div>
-                  <div style={{ marginTop: 6, color: 'rgba(231, 236, 255, 0.6)', fontSize: 12 }}>
-                    Updated {details.meta.updated}
-                  </div>
-                </div>
-
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Log</div>
-                  {(() => {
-                    const logEntries = details.log ?? []
-                    if (logEntries.length === 0) {
-                      return (
-                        <div style={{ color: 'rgba(231, 236, 255, 0.75)', fontSize: 13 }}>
-                          No log entries yet.
-                        </div>
-                      )
-                    }
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {logEntries.map((line, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              fontSize: 13,
-                              padding: '6px 8px',
-                              border: '1px solid rgba(231, 236, 255, 0.10)',
-                              borderRadius: 10,
-                              background: 'rgba(0,0,0,0.15)',
-                            }}
-                          >
-                            {line}
-                          </div>
-                        ))}
-                      </div>
-                    )
-                  })()}
-
-                  <form
-                    style={{ marginTop: 10, display: 'flex', gap: 8 }}
-                    onSubmit={async (e) => {
-                      e.preventDefault()
-                      if (!detailsOpenId) return
-                      const entry = newLogEntry.trim()
-                      if (!entry) return
-                      setPostingLog(true)
-                      setDetailsError(null)
-                      try {
-                        const next = await appendTaskLog(detailsOpenId, entry)
-                        setDetails(next)
-                        setNewLogEntry('')
-                        // refresh index so updated timestamps/order sync
-                        void reload()
-                      } catch (err) {
-                        setDetailsError(err instanceof Error ? err.message : String(err))
-                      } finally {
-                        setPostingLog(false)
-                      }
-                    }}
-                  >
-                    <input
-                      value={newLogEntry}
-                      onChange={(e) => setNewLogEntry(e.target.value)}
-                      placeholder="Add a log entry…"
-                      style={{ flex: 1 }}
-                      disabled={postingLog}
-                    />
-                    <button className="btn" type="submit" disabled={postingLog}>
-                      {postingLog ? 'Adding…' : 'Add'}
-                    </button>
-                  </form>
-                </div>
-
-                {details.body.trim() ? (
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Body</div>
-                    <pre
-                      style={{
-                        margin: 0,
-                        whiteSpace: 'pre-wrap',
-                        fontSize: 12,
-                        color: 'rgba(231, 236, 255, 0.85)',
-                        background: 'rgba(0,0,0,0.18)',
-                        border: '1px solid rgba(231, 236, 255, 0.10)',
-                        borderRadius: 12,
-                        padding: 10,
-                      }}
-                    >
-                      {details.body.trim()}
-                    </pre>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </div>
+      {selectedTask ? (
+        <TaskDetailsModal
+          task={selectedTask}
+          details={taskDetails}
+          loading={detailsLoading}
+          loadError={detailsError}
+          onClose={() => setSelectedTask(null)}
+          onPatch={patchTaskOptimistic}
+          onAppendLog={handleAppendLog}
+        />
       ) : null}
 
       <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
@@ -762,8 +628,8 @@ export function App() {
                     key={nodeId}
                     nodeId={nodeId}
                     task={t}
-                    onOpen={(id) => {
-                      setDetailsOpenId(id)
+                    onOpen={() => {
+                      setSelectedTask(t)
                     }}
                   />
                 )

@@ -16,6 +16,7 @@ type Patch = {
   priority?: string | null
   due?: string | null
   tags?: string[]
+  body?: string
 }
 
 function toTagString(tags: string[]): string {
@@ -53,6 +54,8 @@ export function TaskDetailsModal(props: {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  const [body, setBody] = useState('')
+
   const [logEntry, setLogEntry] = useState('')
   const [postingLog, setPostingLog] = useState(false)
   const [logError, setLogError] = useState<string | null>(null)
@@ -71,11 +74,31 @@ export function TaskDetailsModal(props: {
     setLogError(null)
   }, [task])
 
+  // Sync body from details when loaded
+  useEffect(() => {
+    if (props.details) {
+      setBody(props.details.body)
+    }
+  }, [props.details])
+
   useEffect(() => {
     titleRef.current?.focus()
   }, [])
 
   const computedTags = useMemo(() => parseTags(tagsText), [tagsText])
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (title !== task.title) return true
+    if (status !== task.status) return true
+    const nextPriority = priority.trim() ? priority.trim() : null
+    if ((task.priority ?? null) !== nextPriority) return true
+    const nextDue = due.trim() ? due.trim() : null
+    if ((task.due ?? null) !== nextDue) return true
+    const prevTags = task.tags ?? []
+    if (prevTags.join('\n') !== computedTags.join('\n')) return true
+    if (props.details && body !== props.details.body) return true
+    return false
+  }, [title, status, priority, due, computedTags, body, task, props.details])
 
   async function commit(patch: Patch) {
     setSaving(true)
@@ -105,6 +128,8 @@ export function TaskDetailsModal(props: {
     const prevTags = task.tags ?? []
     if (prevTags.join('\n') !== nextTags.join('\n')) patch.tags = nextTags
 
+    if (props.details && body !== props.details.body) patch.body = body
+
     if (Object.keys(patch).length === 0) return
     await commit(patch)
   }
@@ -132,9 +157,16 @@ export function TaskDetailsModal(props: {
               <span className="pill">{task.path}</span>
             </div>
           </div>
-          <button className="btn btn--ghost" onClick={props.onClose} disabled={saving}>
-            Close
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {hasUnsavedChanges && (
+              <button className="btn" onClick={() => void commitIfChanged()} disabled={saving}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            )}
+            <button className="btn btn--ghost" onClick={props.onClose} disabled={saving}>
+              Close
+            </button>
+          </div>
         </div>
 
         {saveError ? (
@@ -225,24 +257,20 @@ export function TaskDetailsModal(props: {
             </div>
           ) : props.details ? (
             <>
-              <div className="field">
+              <label className="field">
                 <span>Body</span>
-                <pre
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  onBlur={() => void commitIfChanged()}
+                  placeholder="Task body (markdown)"
                   style={{
-                    margin: 0,
-                    padding: 10,
-                    border: '1px solid rgba(231, 236, 255, 0.12)',
-                    borderRadius: 12,
-                    background: 'rgba(11, 16, 32, 0.45)',
-                    color: 'rgba(231, 236, 255, 0.92)',
-                    overflow: 'auto',
-                    maxHeight: 260,
-                    whiteSpace: 'pre-wrap',
+                    minHeight: 160,
+                    maxHeight: 300,
+                    resize: 'vertical',
                   }}
-                >
-                  {props.details.body.trim() ? props.details.body : '(empty)'}
-                </pre>
-              </div>
+                />
+              </label>
 
               {props.details.log?.length || props.onAppendLog ? (
                 <div className="field">
@@ -308,7 +336,13 @@ export function TaskDetailsModal(props: {
           <div className="meta-line">
             <span className="muted">Updated</span>
             <span>{task.updated}</span>
-            {saving ? <span className="muted">Saving…</span> : <span className="muted">Saved</span>}
+            {saving ? (
+              <span className="muted">Saving…</span>
+            ) : hasUnsavedChanges ? (
+              <span style={{ color: '#f59e0b' }}>Unsaved changes</span>
+            ) : (
+              <span className="muted">Saved</span>
+            )}
           </div>
         </div>
       </div>

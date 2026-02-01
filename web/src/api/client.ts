@@ -75,6 +75,7 @@ export type TaskPatch = {
   tags?: string[]
 }
 
+/** PATCH task meta. On 404/5xx the thrown error message is used for conflict/reload UI. */
 export async function patchTask(id: string, patch: TaskPatch): Promise<TaskDetails['meta']> {
   const res = await apiFetch(`/api/task/${encodeURIComponent(id)}`, {
     method: 'PATCH',

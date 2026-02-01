@@ -82,7 +82,7 @@ export function serializeTaskFile(task: ParsedTaskFile): string {
 
 export function applyTaskPatch(
   task: ParsedTaskFile,
-  patch: Partial<Pick<TaskFrontmatterV1, 'status' | 'due' | 'tags' | 'priority' | 'title'>> & { project?: string }
+  patch: Partial<Pick<TaskFrontmatterV1, 'status' | 'due' | 'tags' | 'priority' | 'title'>> & { project?: string; body?: string }
 ): ParsedTaskFile {
   const next: ParsedTaskFile = {
     ...task,
@@ -95,6 +95,7 @@ export function applyTaskPatch(
   if (patch.due !== undefined) next.meta.due = patch.due;
   if (patch.priority !== undefined) next.meta.priority = patch.priority;
   if (patch.tags !== undefined) next.meta.tags = patch.tags;
+  if (patch.body !== undefined) next.body = patch.body;
 
   next.meta.updated = nowIso();
   return next;

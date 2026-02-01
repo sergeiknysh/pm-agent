@@ -5,6 +5,8 @@ dist/
 # Logs
 *.log
 
+.env
+
 # Claude Code local permissions
 .claude/settings.local.json
 

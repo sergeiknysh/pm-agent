@@ -55,6 +55,7 @@ function pickPatch(body: unknown): {
   priority?: TaskPriority;
   tags?: string[];
   title?: string;
+  body?: string;
 } {
   if (typeof body !== 'object' || body === null) return {};
   const b = body as Record<string, unknown>;
@@ -65,6 +66,7 @@ function pickPatch(body: unknown): {
     priority?: TaskPriority;
     tags?: string[];
     title?: string;
+    body?: string;
   } = {};
 
   if (b.status !== undefined) {
@@ -94,6 +96,11 @@ function pickPatch(body: unknown): {
   if (b.title !== undefined) {
     if (!isString(b.title) || b.title.trim() === '') throw new Error('title must be a non-empty string');
     out.title = b.title;
+  }
+
+  if (b.body !== undefined) {
+    if (!isString(b.body)) throw new Error('body must be a string');
+    out.body = b.body;
   }
 
   return out;
